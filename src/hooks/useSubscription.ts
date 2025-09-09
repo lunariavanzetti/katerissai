@@ -1,0 +1,322 @@
+// Subscription State Management Hook for Kateriss AI Video Generator
+// React hook for managing subscription state and operations
+
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  Subscription,
+  PricingTier,
+  UseSubscriptionReturn
+} from '../types/payment';
+import { subscriptionService } from '../services/subscription';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/ui/Toast';
+
+export const useSubscription = (): UseSubscriptionReturn => {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Load user's current subscription
+   */
+  const loadSubscription = useCallback(async () => {
+    if (!user) {
+      setSubscription(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const userSubscription = await subscriptionService.getSubscriptionByUserId(user.id);
+      setSubscription(userSubscription);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load subscription';
+      setError(errorMessage);
+      console.error('Failed to load subscription:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  /**
+   * Create a new subscription
+   */
+  const createSubscription = useCallback(async (planId: string): Promise<Subscription> => {
+    if (!user) {
+      throw new Error('User must be authenticated to create subscription');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // This would typically involve creating subscription via Paddle
+      // For now, we'll create a basic subscription record
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+      const subscriptionData = {
+        userId: user.id,
+        paddleSubscriptionId: `paddle_${Date.now()}`, // This would come from Paddle
+        plan: planId as PricingTier,
+        status: 'active' as const,
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd
+      };
+
+      const newSubscription = await subscriptionService.createSubscription(subscriptionData);
+      setSubscription(newSubscription);
+      
+      showToast({
+        type: 'success',
+        title: 'Subscription Created!',
+        message: `Successfully subscribed to ${planId} plan`
+      });
+
+      return newSubscription;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create subscription';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Subscription Failed',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, showToast]);
+
+  /**
+   * Update subscription plan
+   */
+  const updateSubscription = useCallback(async (planId: string): Promise<Subscription> => {
+    if (!subscription) {
+      throw new Error('No active subscription to update');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { subscription: updatedSubscription } = await subscriptionService.changeSubscriptionPlan(
+        subscription.id,
+        planId as PricingTier,
+        true // prorate
+      );
+
+      setSubscription(updatedSubscription);
+      
+      showToast({
+        type: 'success',
+        title: 'Plan Updated!',
+        message: `Successfully changed to ${planId} plan`
+      });
+
+      return updatedSubscription;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update subscription';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [subscription, showToast]);
+
+  /**
+   * Cancel subscription
+   */
+  const cancelSubscription = useCallback(async (immediately: boolean = false): Promise<void> => {
+    if (!subscription) {
+      throw new Error('No active subscription to cancel');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const canceledSubscription = await subscriptionService.cancelSubscription(
+        subscription.id,
+        immediately
+      );
+
+      setSubscription(canceledSubscription);
+      
+      const message = immediately 
+        ? 'Subscription canceled immediately'
+        : 'Subscription will cancel at the end of your current billing period';
+      
+      showToast({
+        type: 'success',
+        title: 'Subscription Canceled',
+        message
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to cancel subscription';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Cancellation Failed',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [subscription, showToast]);
+
+  /**
+   * Reactivate subscription
+   */
+  const reactivateSubscription = useCallback(async (): Promise<Subscription> => {
+    if (!subscription) {
+      throw new Error('No subscription to reactivate');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const reactivatedSubscription = await subscriptionService.reactivateSubscription(
+        subscription.id
+      );
+
+      setSubscription(reactivatedSubscription);
+      
+      showToast({
+        type: 'success',
+        title: 'Subscription Reactivated!',
+        message: 'Your subscription has been successfully reactivated'
+      });
+
+      return reactivatedSubscription;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to reactivate subscription';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Reactivation Failed',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [subscription, showToast]);
+
+  /**
+   * Refresh subscription data
+   */
+  const refreshSubscription = useCallback(async (): Promise<Subscription | null> => {
+    await loadSubscription();
+    return subscription;
+  }, [loadSubscription, subscription]);
+
+  /**
+   * Check if subscription has specific feature access
+   */
+  const hasFeatureAccess = useCallback((feature: string): boolean => {
+    if (!subscription || subscription.status !== 'active') {
+      return false;
+    }
+
+    return subscriptionService.checkSubscriptionAccess(subscription.userId, feature);
+  }, [subscription]);
+
+  /**
+   * Get subscription status info
+   */
+  const getStatusInfo = useCallback(() => {
+    if (!subscription) {
+      return {
+        isActive: false,
+        isInTrial: false,
+        daysRemaining: 0,
+        willCancelAtPeriodEnd: false,
+        renewalDate: null
+      };
+    }
+
+    return {
+      isActive: subscription.status === 'active',
+      isInTrial: subscriptionService.isInTrial(subscription),
+      daysRemaining: subscriptionService.getDaysRemaining(subscription),
+      willCancelAtPeriodEnd: subscriptionService.willCancelAtPeriodEnd(subscription),
+      renewalDate: subscriptionService.getRenewalDate(subscription)
+    };
+  }, [subscription]);
+
+  /**
+   * Get subscription limits
+   */
+  const getLimits = useCallback(async () => {
+    if (!user) {
+      return { videoLimit: 0, hasCommercialRights: false };
+    }
+
+    return subscriptionService.getSubscriptionLimits(user.id);
+  }, [user]);
+
+  // Load subscription on mount and user change
+  useEffect(() => {
+    loadSubscription();
+  }, [loadSubscription]);
+
+  // Auto-refresh subscription every 5 minutes if user is active
+  useEffect(() => {
+    if (!user || !subscription) return;
+
+    const interval = setInterval(() => {
+      loadSubscription();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [user, subscription, loadSubscription]);
+
+  return {
+    subscription,
+    loading,
+    error,
+    actions: {
+      createSubscription,
+      updateSubscription,
+      cancelSubscription,
+      reactivateSubscription,
+      refreshSubscription
+    },
+    // Additional utility methods
+    hasFeatureAccess,
+    getStatusInfo,
+    getLimits
+  } as UseSubscriptionReturn & {
+    hasFeatureAccess: (feature: string) => boolean;
+    getStatusInfo: () => {
+      isActive: boolean;
+      isInTrial: boolean;
+      daysRemaining: number;
+      willCancelAtPeriodEnd: boolean;
+      renewalDate: Date | null;
+    };
+    getLimits: () => Promise<{ videoLimit: number | null; hasCommercialRights: boolean }>;
+  };
+};

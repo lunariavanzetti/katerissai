@@ -1,0 +1,448 @@
+// Billing Management Hook for Kateriss AI Video Generator
+// React hook for invoice and payment method management
+
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  Invoice,
+  PaymentMethod,
+  UseBillingReturn
+} from '../types/payment';
+import { billingService } from '../services/billing';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/ui/Toast';
+
+export const useBilling = (): UseBillingReturn => {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Load invoices for the user
+   */
+  const loadInvoices = useCallback(async () => {
+    if (!user) {
+      setInvoices([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const userInvoices = await billingService.getUserInvoices(user.id);
+      setInvoices(userInvoices);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load invoices';
+      setError(errorMessage);
+      console.error('Failed to load invoices:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  /**
+   * Load payment methods for the user
+   */
+  const loadPaymentMethods = useCallback(async () => {
+    if (!user) {
+      setPaymentMethods([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const userPaymentMethods = await billingService.getUserPaymentMethods(user.id);
+      setPaymentMethods(userPaymentMethods);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load payment methods';
+      setError(errorMessage);
+      console.error('Failed to load payment methods:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  /**
+   * Get invoices (public method)
+   */
+  const getInvoices = useCallback(async (): Promise<Invoice[]> => {
+    await loadInvoices();
+    return invoices;
+  }, [loadInvoices, invoices]);
+
+  /**
+   * Download invoice PDF
+   */
+  const downloadInvoice = useCallback(async (invoiceId: string): Promise<string> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const downloadUrl = await billingService.generateInvoiceDownloadUrl(invoiceId);
+      
+      showToast({
+        type: 'success',
+        title: 'Invoice Ready',
+        message: 'Invoice download started'
+      });
+
+      return downloadUrl;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to download invoice';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Download Failed',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  /**
+   * Add new payment method
+   */
+  const addPaymentMethod = useCallback(async (paddleMethodId: string): Promise<PaymentMethod> => {
+    if (!user) {
+      throw new Error('User must be authenticated to add payment methods');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // This would typically get payment method details from Paddle
+      const paymentMethodData = {
+        userId: user.id,
+        paddlePaymentMethodId: paddleMethodId,
+        type: 'card' as const, // This would come from Paddle
+        isDefault: paymentMethods.length === 0 // First payment method is default
+      };
+
+      const newPaymentMethod = await billingService.createPaymentMethod(paymentMethodData);
+      
+      // Reload payment methods
+      await loadPaymentMethods();
+      
+      showToast({
+        type: 'success',
+        title: 'Payment Method Added',
+        message: 'Payment method successfully added to your account'
+      });
+
+      return newPaymentMethod;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add payment method';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Failed to Add Payment Method',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, paymentMethods.length, loadPaymentMethods, showToast]);
+
+  /**
+   * Remove payment method
+   */
+  const removePaymentMethod = useCallback(async (methodId: string): Promise<void> => {
+    if (!user) {
+      throw new Error('User must be authenticated to remove payment methods');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      await billingService.removePaymentMethod(methodId, user.id);
+      
+      // Reload payment methods
+      await loadPaymentMethods();
+      
+      showToast({
+        type: 'success',
+        title: 'Payment Method Removed',
+        message: 'Payment method successfully removed from your account'
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to remove payment method';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Failed to Remove Payment Method',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, loadPaymentMethods, showToast]);
+
+  /**
+   * Set default payment method
+   */
+  const setDefaultPaymentMethod = useCallback(async (methodId: string): Promise<void> => {
+    if (!user) {
+      throw new Error('User must be authenticated to set default payment method');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      await billingService.setDefaultPaymentMethod(methodId, user.id);
+      
+      // Reload payment methods
+      await loadPaymentMethods();
+      
+      showToast({
+        type: 'success',
+        title: 'Default Payment Method Updated',
+        message: 'Your default payment method has been updated'
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to set default payment method';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Failed to Update Default Payment Method',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, loadPaymentMethods, showToast]);
+
+  /**
+   * Retry failed payment
+   */
+  const retryFailedPayment = useCallback(async (invoiceId: string): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      await billingService.retryInvoicePayment(invoiceId);
+      
+      // Reload invoices to reflect updated status
+      await loadInvoices();
+      
+      showToast({
+        type: 'success',
+        title: 'Payment Retry Initiated',
+        message: 'We will attempt to process your payment again'
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to retry payment';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Payment Retry Failed',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [loadInvoices, showToast]);
+
+  /**
+   * Get billing summary
+   */
+  const getBillingSummary = useCallback(async (startDate?: Date, endDate?: Date) => {
+    if (!user) {
+      throw new Error('User must be authenticated to view billing summary');
+    }
+
+    try {
+      return await billingService.getBillingSummary(user.id, startDate, endDate);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get billing summary';
+      setError(errorMessage);
+      throw err;
+    }
+  }, [user]);
+
+  /**
+   * Export invoices to CSV
+   */
+  const exportInvoices = useCallback(async (startDate?: Date, endDate?: Date): Promise<string> => {
+    if (!user) {
+      throw new Error('User must be authenticated to export invoices');
+    }
+
+    try {
+      setLoading(true);
+      const csvData = await billingService.exportInvoicesToCsv(user.id, startDate, endDate);
+      
+      showToast({
+        type: 'success',
+        title: 'Export Ready',
+        message: 'Invoices exported successfully'
+      });
+
+      return csvData;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to export invoices';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Export Failed',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, showToast]);
+
+  /**
+   * Get billing portal URL
+   */
+  const getBillingPortalUrl = useCallback(async (): Promise<string> => {
+    if (!user) {
+      throw new Error('User must be authenticated to access billing portal');
+    }
+
+    try {
+      return await billingService.getBillingPortalUrl(user.id);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get billing portal URL';
+      setError(errorMessage);
+      throw err;
+    }
+  }, [user]);
+
+  /**
+   * Get invoice by ID
+   */
+  const getInvoice = useCallback(async (invoiceId: string): Promise<Invoice | null> => {
+    try {
+      return await billingService.getInvoice(invoiceId);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get invoice';
+      setError(errorMessage);
+      throw err;
+    }
+  }, []);
+
+  /**
+   * Get overdue invoices
+   */
+  const getOverdueInvoices = useCallback((): Invoice[] => {
+    const now = new Date();
+    return invoices.filter(invoice => 
+      invoice.status === 'open' && invoice.dueAt < now
+    );
+  }, [invoices]);
+
+  /**
+   * Get upcoming invoices (due within 7 days)
+   */
+  const getUpcomingInvoices = useCallback((): Invoice[] => {
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
+    
+    return invoices.filter(invoice => 
+      invoice.status === 'open' && 
+      invoice.dueAt >= now && 
+      invoice.dueAt <= sevenDaysFromNow
+    );
+  }, [invoices]);
+
+  /**
+   * Get default payment method
+   */
+  const getDefaultPaymentMethod = useCallback((): PaymentMethod | null => {
+    return paymentMethods.find(method => method.isDefault) || null;
+  }, [paymentMethods]);
+
+  /**
+   * Format payment method display
+   */
+  const formatPaymentMethod = useCallback((method: PaymentMethod): string => {
+    if (method.type === 'card') {
+      const brand = method.brand ? method.brand.toUpperCase() : 'CARD';
+      const last4 = method.last4 ? `****${method.last4}` : '****';
+      return `${brand} ${last4}`;
+    }
+    
+    return method.type.toUpperCase();
+  }, []);
+
+  // Load data on mount and user change
+  useEffect(() => {
+    if (user) {
+      loadInvoices();
+      loadPaymentMethods();
+    }
+  }, [user, loadInvoices, loadPaymentMethods]);
+
+  // Auto-refresh billing data every 5 minutes
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      loadInvoices();
+      loadPaymentMethods();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [user, loadInvoices, loadPaymentMethods]);
+
+  return {
+    invoices,
+    paymentMethods,
+    loading,
+    error,
+    actions: {
+      getInvoices,
+      downloadInvoice,
+      addPaymentMethod,
+      removePaymentMethod,
+      setDefaultPaymentMethod,
+      retryFailedPayment
+    },
+    // Additional utility methods
+    getBillingSummary,
+    exportInvoices,
+    getBillingPortalUrl,
+    getInvoice,
+    getOverdueInvoices,
+    getUpcomingInvoices,
+    getDefaultPaymentMethod,
+    formatPaymentMethod
+  } as UseBillingReturn & {
+    getBillingSummary: (startDate?: Date, endDate?: Date) => Promise<any>;
+    exportInvoices: (startDate?: Date, endDate?: Date) => Promise<string>;
+    getBillingPortalUrl: () => Promise<string>;
+    getInvoice: (invoiceId: string) => Promise<Invoice | null>;
+    getOverdueInvoices: () => Invoice[];
+    getUpcomingInvoices: () => Invoice[];
+    getDefaultPaymentMethod: () => PaymentMethod | null;
+    formatPaymentMethod: (method: PaymentMethod) => string;
+  };
+};

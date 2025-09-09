@@ -1,0 +1,393 @@
+// AuthGuard Component for Kateriss AI Video Generator
+// Protects routes and components based on authentication status
+
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuthStatus } from '../../contexts/AuthContext';
+import { Loading, Card, Button } from '../ui';
+import type { AuthGuardProps } from '../../types/auth';
+
+// =============================================================================
+// MAIN AUTH GUARD COMPONENT
+// =============================================================================
+
+export const AuthGuard: React.FC<AuthGuardProps> = ({
+  children,
+  fallback,
+  redirectTo = '/auth/login',
+  requireEmailVerification = true,
+  requiredRole,
+}) => {
+  const location = useLocation();
+  const {
+    isAuthenticated,
+    isEmailConfirmed,
+    loading,
+    needsEmailVerification,
+    canAccessApp,
+  } = useAuthStatus();
+
+  // Show loading state during auth check
+  if (loading) {
+    if (fallback) {
+      return <>{fallback}</>;
+    }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="brutal-card-pink p-8 mx-4">
+          <Loading 
+            variant="spinner" 
+            size="lg" 
+            className="mb-4 mx-auto"
+          />
+          <p className="text-center text-black font-semibold uppercase tracking-wide">
+            Checking Authentication...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not authenticated - redirect to login
+  if (!isAuthenticated) {
+    return (
+      <Navigate 
+        to={redirectTo} 
+        state={{ from: location.pathname }}
+        replace 
+      />
+    );
+  }
+
+  // Email verification required but not completed
+  if (requireEmailVerification && needsEmailVerification) {
+    return <EmailVerificationRequired />;
+  }
+
+  // Role-based access control (if implemented)
+  if (requiredRole) {
+    // This would need to be implemented based on your role system
+    // For now, we'll just allow access
+    console.warn('Role-based access control not yet implemented');
+  }
+
+  // All checks passed - render children
+  if (canAccessApp) {
+    return <>{children}</>;
+  }
+
+  // Fallback for any other auth states
+  return <AuthenticationError />;
+};
+
+// =============================================================================
+// EMAIL VERIFICATION COMPONENT
+// =============================================================================
+
+const EmailVerificationRequired: React.FC = () => {
+  const [isResending, setIsResending] = React.useState(false);
+  const [resendMessage, setResendMessage] = React.useState<string | null>(null);
+
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    setResendMessage(null);
+
+    try {
+      // In a real implementation, you'd call your auth service to resend verification
+      // For now, we'll simulate the process
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setResendMessage('Verification email sent! Please check your inbox.');
+    } catch (error) {
+      setResendMessage('Failed to send verification email. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    // This would typically call your sign out method
+    window.location.href = '/auth/login';
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white px-4">
+      <div className="max-w-md w-full">
+        <Card className="brutal-card-pink p-8 text-center space-y-6">
+          {/* Icon */}
+          <div className="mx-auto w-16 h-16 bg-[#ff0080] border-3 border-black flex items-center justify-center">
+            <svg 
+              className="w-8 h-8 text-white" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth="2" 
+                d="M3 8l7.89 4.26c.3.16.69.16 1-.01L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" 
+              />
+            </svg>
+          </div>
+
+          {/* Title */}
+          <div>
+            <h1 className="text-2xl font-bold uppercase tracking-wide text-black mb-2">
+              Verify Your Email
+            </h1>
+            <p className="text-gray-600 text-sm">
+              We've sent you a verification email. Please check your inbox and click the link to continue.
+            </p>
+          </div>
+
+          {/* Message */}
+          {resendMessage && (
+            <div className={`p-4 border-3 border-black ${
+              resendMessage.includes('sent') 
+                ? 'bg-[#00ff00] text-black' 
+                : 'bg-red-100 text-red-800'
+            }`}>
+              <p className="text-sm font-medium uppercase tracking-wide">
+                {resendMessage}
+              </p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="space-y-3">
+            <Button
+              onClick={handleResendVerification}
+              loading={isResending}
+              variant="primary"
+              fullWidth
+            >
+              {isResending ? 'Sending...' : 'Resend Verification Email'}
+            </Button>
+
+            <Button
+              onClick={handleSignOut}
+              variant="outline"
+              fullWidth
+            >
+              Sign Out
+            </Button>
+          </div>
+
+          {/* Help text */}
+          <div className="text-xs text-gray-500 space-y-1">
+            <p>Didn't receive the email?</p>
+            <p>Check your spam folder or try resending.</p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// =============================================================================
+// AUTHENTICATION ERROR COMPONENT
+// =============================================================================
+
+const AuthenticationError: React.FC = () => {
+  const handleRetry = () => {
+    window.location.reload();
+  };
+
+  const handleGoHome = () => {
+    window.location.href = '/';
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white px-4">
+      <div className="max-w-md w-full">
+        <Card className="brutal-card p-8 text-center space-y-6">
+          {/* Error Icon */}
+          <div className="mx-auto w-16 h-16 bg-red-500 border-3 border-black flex items-center justify-center">
+            <svg 
+              className="w-8 h-8 text-white" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth="2" 
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" 
+              />
+            </svg>
+          </div>
+
+          {/* Title */}
+          <div>
+            <h1 className="text-2xl font-bold uppercase tracking-wide text-black mb-2">
+              Authentication Error
+            </h1>
+            <p className="text-gray-600 text-sm">
+              Something went wrong with authentication. Please try again.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-3">
+            <Button
+              onClick={handleRetry}
+              variant="primary"
+              fullWidth
+            >
+              Try Again
+            </Button>
+
+            <Button
+              onClick={handleGoHome}
+              variant="outline"
+              fullWidth
+            >
+              Go to Homepage
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// =============================================================================
+// COMPONENT-LEVEL AUTH GUARD
+// =============================================================================
+
+interface RequireAuthProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  message?: string;
+}
+
+export const RequireAuth: React.FC<RequireAuthProps> = ({
+  children,
+  fallback,
+  message = 'Please sign in to access this feature.'
+}) => {
+  const { isAuthenticated, loading } = useAuthStatus();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loading variant="spinner" size="md" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    if (fallback) {
+      return <>{fallback}</>;
+    }
+
+    return (
+      <Card className="brutal-card-pink p-6 text-center">
+        <div className="space-y-4">
+          <svg 
+            className="w-12 h-12 mx-auto text-[#ff0080]" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth="2" 
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
+            />
+          </svg>
+          
+          <div>
+            <h3 className="text-lg font-bold uppercase tracking-wide text-black mb-2">
+              Sign In Required
+            </h3>
+            <p className="text-gray-600 text-sm mb-4">
+              {message}
+            </p>
+          </div>
+
+          <div className="flex gap-3 justify-center">
+            <Button
+              onClick={() => window.location.href = '/auth/login'}
+              variant="primary"
+              size="sm"
+            >
+              Sign In
+            </Button>
+            <Button
+              onClick={() => window.location.href = '/auth/signup'}
+              variant="secondary"
+              size="sm"
+            >
+              Sign Up
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+// =============================================================================
+// ADMIN GUARD (for future use)
+// =============================================================================
+
+interface AdminGuardProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+export const AdminGuard: React.FC<AdminGuardProps> = ({
+  children,
+  fallback
+}) => {
+  const { isAuthenticated } = useAuthStatus();
+
+  // TODO: Implement proper admin role checking
+  const isAdmin = false; // This would check user roles/permissions
+
+  if (!isAuthenticated || !isAdmin) {
+    if (fallback) {
+      return <>{fallback}</>;
+    }
+
+    return (
+      <Card className="brutal-card p-6 text-center">
+        <div className="space-y-4">
+          <div className="w-12 h-12 mx-auto bg-red-500 border-3 border-black flex items-center justify-center">
+            <svg 
+              className="w-6 h-6 text-white" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth="2" 
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" 
+              />
+            </svg>
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-bold uppercase tracking-wide text-black mb-2">
+              Access Denied
+            </h3>
+            <p className="text-gray-600 text-sm">
+              You don't have permission to access this area.
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return <>{children}</>;
+};

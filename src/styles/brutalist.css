@@ -1,0 +1,299 @@
+/* Brutalist Design System with Pink Accents */
+
+/* Base Brutal Components */
+.brutal-card {
+  background: var(--white);
+  border: 3px solid var(--black);
+  box-shadow: var(--shadow);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.brutal-card:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: var(--shadow-hover);
+}
+
+.brutal-card-pink {
+  background: var(--white);
+  border: 3px solid var(--primary);
+  box-shadow: var(--shadow-pink);
+}
+
+.brutal-card-pink:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: 8px 8px 0px var(--primary);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 24px;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 3px solid var(--black);
+  font-family: var(--font-primary);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-lg);
+  background: var(--accent);
+}
+
+.btn-primary:active {
+  transform: translate(0, 0);
+  box-shadow: 2px 2px 0px var(--black);
+}
+
+.btn-secondary {
+  background: var(--white);
+  color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-pink);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px var(--primary);
+  background: var(--gray-100);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--black);
+  border-color: var(--black);
+  box-shadow: var(--shadow);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--black);
+  color: var(--white);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--primary);
+  border: none;
+  box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--accent);
+  transform: none;
+}
+
+/* Input Fields */
+.brutal-input {
+  padding: 16px;
+  border: 3px solid var(--black);
+  background: var(--white);
+  font-family: var(--font-primary);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--black);
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow);
+}
+
+.brutal-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--shadow-pink);
+  transform: translate(-2px, -2px);
+}
+
+.brutal-input::placeholder {
+  color: #666;
+  font-weight: 400;
+}
+
+.brutal-input.error {
+  border-color: #ff0000;
+  box-shadow: 4px 4px 0px #ff0000;
+}
+
+/* Textarea */
+.brutal-textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: var(--font-primary);
+}
+
+/* Select */
+.brutal-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 48px;
+}
+
+/* Modal */
+.brutal-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--white);
+  border: 3px solid var(--black);
+  box-shadow: 12px 12px 0px var(--black);
+  z-index: 1000;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.brutal-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 999;
+  backdrop-filter: blur(4px);
+}
+
+/* Toast */
+.brutal-toast {
+  background: var(--primary) !important;
+  color: var(--white) !important;
+  border: 3px solid var(--black) !important;
+  box-shadow: var(--shadow) !important;
+  font-family: var(--font-primary) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Progress Bar */
+.brutal-progress {
+  background: var(--gray-100);
+  border: 3px solid var(--black);
+  height: 20px;
+  overflow: hidden;
+  position: relative;
+}
+
+.brutal-progress-fill {
+  background: var(--primary);
+  height: 100%;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.brutal-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.2) 4px,
+    rgba(255, 255, 255, 0.2) 8px
+  );
+}
+
+/* Gradient Text */
+.text-gradient {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.gradient-bg {
+  background: var(--gradient-primary);
+}
+
+/* Loading States */
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--gray-100);
+  border-top: 3px solid var(--primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Utility Classes */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .btn {
+    padding: 12px 16px;
+    font-size: 12px;
+  }
+  
+  .brutal-input {
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .brutal-card {
+    border-width: 2px;
+    box-shadow: 2px 2px 0px var(--black);
+  }
+  
+  .brutal-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0px var(--black);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --shadow: 6px 6px 0px #000;
+    --shadow-hover: 10px 10px 0px #000;
+  }
+  
+  .brutal-card,
+  .btn,
+  .brutal-input {
+    border-width: 4px;
+  }
+}

@@ -1,0 +1,271 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { VideoHistory } from '../components/video/VideoHistory';
+import { UsageTracker } from '../components/payment/UsageTracker';
+import { BillingPortal } from '../components/payment/BillingPortal';
+import { ProfileSettings } from '../components/auth/ProfileSettings';
+import { Button } from '../components/ui/Button';
+import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../hooks/useSubscription';
+import { useUsage } from '../hooks/useUsage';
+
+const DashboardPage: React.FC = () => {
+  const { user } = useAuth();
+  const { subscription } = useSubscription();
+  const { usage } = useUsage();
+
+  const getDashboardStats = () => {
+    const stats = [
+      {
+        label: 'Videos Generated',
+        value: usage?.totalVideos || 0,
+        icon: '🎬',
+        change: '+12 this week',
+        changeType: 'positive' as const,
+      },
+      {
+        label: 'Current Plan',
+        value: subscription?.tier || 'Free',
+        icon: '⭐',
+        change: subscription?.tier === 'premium' ? 'Unlimited' : `${usage?.remainingVideos || 0} remaining`,
+        changeType: 'neutral' as const,
+      },
+      {
+        label: 'Storage Used',
+        value: `${usage?.storageUsed || 0}GB`,
+        icon: '💾',
+        change: `of ${subscription?.tier === 'premium' ? '∞' : '10'}GB`,
+        changeType: 'neutral' as const,
+      },
+      {
+        label: 'Credits Available',
+        value: usage?.credits || 0,
+        icon: '💰',
+        change: subscription?.tier === 'premium' ? 'Unlimited' : 'Buy more',
+        changeType: subscription?.tier === 'premium' ? 'positive' : 'warning' as const,
+      },
+    ];
+
+    return stats;
+  };
+
+  const quickActions = [
+    {
+      title: 'Generate New Video',
+      description: 'Create a new AI-generated video',
+      icon: '🎬',
+      href: '/generate',
+      primary: true,
+    },
+    {
+      title: 'Upgrade Plan',
+      description: 'Get more videos and features',
+      icon: '⚡',
+      href: '/pricing',
+      primary: false,
+      highlight: subscription?.tier === 'free',
+    },
+    {
+      title: 'Browse Gallery',
+      description: 'View community creations',
+      icon: '🎨',
+      href: '/gallery',
+      primary: false,
+    },
+    {
+      title: 'API Access',
+      description: 'Integrate with your apps',
+      icon: '🔗',
+      href: '/api-keys',
+      primary: false,
+      disabled: subscription?.tier !== 'premium',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl lg:text-5xl font-bold text-black mb-4">
+            Welcome back, <span className="text-gradient">{user?.user_metadata?.full_name || 'Creator'}</span>!
+          </h1>
+          <p className="text-xl text-gray-600 font-medium">
+            Manage your videos, track usage, and explore new creative possibilities.
+          </p>
+        </div>
+
+        {/* Stats Overview */}
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
+          {getDashboardStats().map((stat, index) => (
+            <Card key={index} className="text-center">
+              <CardContent className="p-6">
+                <div className="text-3xl mb-2">{stat.icon}</div>
+                <div className="text-2xl font-bold text-black mb-1">{stat.value}</div>
+                <div className="text-sm text-gray-600 font-medium mb-2">{stat.label}</div>
+                <div className={`text-xs font-medium ${
+                  stat.changeType === 'positive' ? 'text-secondary' :
+                  stat.changeType === 'warning' ? 'text-primary' :
+                  'text-gray-500'
+                }`}>
+                  {stat.change}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-black mb-6">Quick Actions</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {quickActions.map((action, index) => (
+              <Card 
+                key={index} 
+                variant={action.highlight ? 'pink' : 'default'}
+                className={action.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:transform hover:translate-y-[-4px] transition-all duration-300'}
+              >
+                <CardContent className="p-6 text-center">
+                  <div className="text-3xl mb-4">{action.icon}</div>
+                  <h3 className="font-bold text-black mb-2">{action.title}</h3>
+                  <p className="text-sm text-gray-600 font-medium mb-4">{action.description}</p>
+                  {action.disabled ? (
+                    <Button variant="outline" size="sm" disabled className="w-full">
+                      Premium Only
+                    </Button>
+                  ) : (
+                    <Link to={action.href}>
+                      <Button 
+                        variant={action.primary ? 'primary' : 'outline'} 
+                        size="sm" 
+                        className="w-full"
+                      >
+                        {action.primary ? 'Create Now' : 'View'}
+                      </Button>
+                    </Link>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Recent Videos */}
+            <Card>
+              <CardHeader className="border-b-3 border-gray-200 pb-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold text-black">Your Videos</h2>
+                    <p className="text-gray-600 font-medium">
+                      Manage and organize your AI-generated content
+                    </p>
+                  </div>
+                  <Link to="/generate">
+                    <Button variant="primary" size="sm">
+                      Create New
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8">
+                <VideoHistory />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-8">
+            {/* Usage Tracker */}
+            <Card variant="pink">
+              <CardHeader className="border-b-3 border-primary pb-6">
+                <h3 className="text-xl font-bold text-black">Usage This Month</h3>
+              </CardHeader>
+              <CardContent className="p-6">
+                <UsageTracker />
+              </CardContent>
+            </Card>
+
+            {/* Billing Portal */}
+            <Card>
+              <CardHeader className="border-b-3 border-gray-200 pb-6">
+                <h3 className="text-xl font-bold text-black">Billing & Plans</h3>
+              </CardHeader>
+              <CardContent className="p-6">
+                <BillingPortal />
+              </CardContent>
+            </Card>
+
+            {/* Profile Settings */}
+            <Card>
+              <CardHeader className="border-b-3 border-gray-200 pb-6">
+                <h3 className="text-xl font-bold text-black">Profile Settings</h3>
+              </CardHeader>
+              <CardContent className="p-6">
+                <ProfileSettings />
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader className="border-b-3 border-gray-200 pb-6">
+                <h3 className="text-xl font-bold text-black">Recent Activity</h3>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4 text-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-secondary rounded-full"></div>
+                    <div>
+                      <div className="font-medium text-black">Video generated</div>
+                      <div className="text-gray-500">2 hours ago</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    <div>
+                      <div className="font-medium text-black">Plan upgraded</div>
+                      <div className="text-gray-500">1 day ago</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div>
+                      <div className="font-medium text-black">Account created</div>
+                      <div className="text-gray-500">3 days ago</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Help & Support */}
+            <Card>
+              <CardContent className="p-6 text-center space-y-4">
+                <h3 className="font-bold text-black">Need Help?</h3>
+                <div className="space-y-2 text-sm">
+                  <a href="/docs" className="block text-primary hover:text-accent font-medium">
+                    📚 Documentation
+                  </a>
+                  <a href="/community" className="block text-primary hover:text-accent font-medium">
+                    💬 Community Forum
+                  </a>
+                  <a href="/support" className="block text-primary hover:text-accent font-medium">
+                    🎧 Contact Support
+                  </a>
+                  <a href="/tutorials" className="block text-primary hover:text-accent font-medium">
+                    🎥 Video Tutorials
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DashboardPage;

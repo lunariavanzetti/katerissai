@@ -1,0 +1,356 @@
+// Usage Tracking Hook for Kateriss AI Video Generator
+// React hook for managing video usage and limits
+
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  UsageData,
+  UsageEvent,
+  UseUsageReturn,
+  UsageEventType
+} from '../types/payment';
+import { usageService } from '../services/usage';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/ui/Toast';
+
+export const useUsage = (): UseUsageReturn => {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Load current usage data
+   */
+  const loadUsage = useCallback(async () => {
+    if (!user) {
+      setUsage(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const currentUsage = await usageService.getCurrentUsage(user.id);
+      setUsage(currentUsage);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load usage data';
+      setError(errorMessage);
+      console.error('Failed to load usage:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  /**
+   * Record a usage event
+   */
+  const recordUsage = useCallback(async (
+    type: UsageEventType,
+    count: number = 1
+  ): Promise<void> => {
+    if (!user) {
+      throw new Error('User must be authenticated to record usage');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      await usageService.recordUsage({
+        userId: user.id,
+        type,
+        count
+      });
+
+      // Reload usage data to reflect changes
+      await loadUsage();
+
+      // Show appropriate toast based on usage type
+      if (type === 'video_generated') {
+        const updatedUsage = await usageService.getCurrentUsage(user.id);
+        
+        if (updatedUsage.videoLimit && updatedUsage.videosGenerated >= updatedUsage.videoLimit) {
+          showToast({
+            type: 'warning',
+            title: 'Limit Reached',
+            message: `You've used all ${updatedUsage.videoLimit} videos in your plan`
+          });
+        } else if (updatedUsage.videoLimit && updatedUsage.usagePercentage >= 80) {
+          const remaining = updatedUsage.remainingVideos || 0;
+          showToast({
+            type: 'warning',
+            title: 'Usage Alert',
+            message: `You have ${remaining} videos remaining this month`
+          });
+        }
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to record usage';
+      setError(errorMessage);
+      
+      showToast({
+        type: 'error',
+        title: 'Usage Tracking Error',
+        message: errorMessage
+      });
+      
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, loadUsage, showToast]);
+
+  /**
+   * Get usage history
+   */
+  const getUsageHistory = useCallback(async (): Promise<UsageEvent[]> => {
+    if (!user) {
+      throw new Error('User must be authenticated to view usage history');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      return await usageService.getUsageHistory(user.id);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get usage history';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  /**
+   * Check if user can generate a video
+   */
+  const checkLimit = useCallback(async (): Promise<boolean> => {
+    if (!user) {
+      return false;
+    }
+
+    try {
+      const result = await usageService.canGenerateVideo(user.id);
+      
+      if (!result.canGenerate && result.reason) {
+        showToast({
+          type: 'error',
+          title: 'Generation Limit Reached',
+          message: result.reason
+        });
+      }
+
+      return result.canGenerate;
+    } catch (err) {
+      console.error('Failed to check usage limit:', err);
+      return false;
+    }
+  }, [user, showToast]);
+
+  /**
+   * Refresh usage data
+   */
+  const refreshUsage = useCallback(async (): Promise<UsageData | null> => {
+    await loadUsage();
+    return usage;
+  }, [loadUsage, usage]);
+
+  /**
+   * Get usage statistics
+   */
+  const getUsageStatistics = useCallback(async (
+    periodType: 'daily' | 'weekly' | 'monthly' = 'monthly',
+    periods: number = 12
+  ) => {
+    if (!user) {
+      throw new Error('User must be authenticated to view usage statistics');
+    }
+
+    try {
+      return await usageService.getUsageStatistics(user.id, periodType, periods);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get usage statistics';
+      setError(errorMessage);
+      throw err;
+    }
+  }, [user]);
+
+  /**
+   * Get usage trends
+   */
+  const getUsageTrends = useCallback(async () => {
+    if (!user) {
+      throw new Error('User must be authenticated to view usage trends');
+    }
+
+    try {
+      return await usageService.getUsageTrends(user.id);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get usage trends';
+      setError(errorMessage);
+      throw err;
+    }
+  }, [user]);
+
+  /**
+   * Get usage percentage with color coding
+   */
+  const getUsageColor = useCallback(() => {
+    if (!usage || !usage.videoLimit) {
+      return 'bg-gray-400';
+    }
+
+    const percentage = usage.usagePercentage;
+    
+    if (percentage >= 90) return 'bg-red-500';
+    if (percentage >= 75) return 'bg-yellow-500';
+    if (percentage >= 50) return 'bg-[#ff0080]'; // Pink theme color
+    return 'bg-[#00ff00]'; // Green theme color
+  }, [usage]);
+
+  /**
+   * Get usage status message
+   */
+  const getUsageMessage = useCallback(() => {
+    if (!usage) {
+      return 'Loading usage data...';
+    }
+
+    if (!usage.videoLimit) {
+      return `${usage.videosGenerated} videos generated this month`;
+    }
+
+    const remaining = usage.remainingVideos || 0;
+    
+    if (remaining === 0) {
+      return 'Monthly limit reached';
+    }
+
+    if (usage.usagePercentage >= 80) {
+      return `${remaining} videos remaining`;
+    }
+
+    return `${usage.videosGenerated} of ${usage.videoLimit} videos used`;
+  }, [usage]);
+
+  /**
+   * Check if user is approaching limit
+   */
+  const isApproachingLimit = useCallback(() => {
+    return usage?.videoLimit && usage.usagePercentage >= 80;
+  }, [usage]);
+
+  /**
+   * Check if user has exceeded limit
+   */
+  const hasExceededLimit = useCallback(() => {
+    return usage?.videoLimit && usage.videosGenerated >= usage.videoLimit;
+  }, [usage]);
+
+  /**
+   * Get days until reset
+   */
+  const getDaysUntilReset = useCallback(() => {
+    if (!usage) return 0;
+
+    const now = new Date();
+    const resetDate = usage.resetDate;
+    const diffTime = resetDate.getTime() - now.getTime();
+    
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }, [usage]);
+
+  /**
+   * Format usage display
+   */
+  const formatUsageDisplay = useCallback(() => {
+    if (!usage) return { current: 0, limit: '∞', percentage: 0 };
+
+    return {
+      current: usage.videosGenerated,
+      limit: usage.videoLimit?.toString() || '∞',
+      percentage: usage.usagePercentage
+    };
+  }, [usage]);
+
+  // Load usage on mount and user change
+  useEffect(() => {
+    loadUsage();
+  }, [loadUsage]);
+
+  // Auto-refresh usage every 2 minutes if user is active
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      loadUsage();
+    }, 2 * 60 * 1000); // 2 minutes
+
+    return () => clearInterval(interval);
+  }, [user, loadUsage]);
+
+  // Monitor usage and show warnings
+  useEffect(() => {
+    if (!usage || !usage.videoLimit) return;
+
+    // Show warning when approaching limit (80% usage)
+    if (usage.usagePercentage >= 80 && usage.usagePercentage < 90) {
+      const remaining = usage.remainingVideos || 0;
+      if (remaining > 0) {
+        showToast({
+          type: 'warning',
+          title: 'Usage Alert',
+          message: `You have ${remaining} videos remaining this month`,
+          duration: 5000
+        });
+      }
+    }
+
+    // Show final warning when at 95% usage
+    if (usage.usagePercentage >= 95 && usage.usagePercentage < 100) {
+      const remaining = usage.remainingVideos || 0;
+      if (remaining > 0) {
+        showToast({
+          type: 'warning',
+          title: 'Final Warning',
+          message: `Only ${remaining} videos left in your plan`,
+          duration: 8000
+        });
+      }
+    }
+  }, [usage, showToast]);
+
+  return {
+    usage,
+    loading,
+    error,
+    actions: {
+      recordUsage,
+      getUsageHistory,
+      checkLimit,
+      refreshUsage
+    },
+    // Additional utility methods
+    getUsageStatistics,
+    getUsageTrends,
+    getUsageColor,
+    getUsageMessage,
+    isApproachingLimit,
+    hasExceededLimit,
+    getDaysUntilReset,
+    formatUsageDisplay
+  } as UseUsageReturn & {
+    getUsageStatistics: (periodType?: 'daily' | 'weekly' | 'monthly', periods?: number) => Promise<any>;
+    getUsageTrends: () => Promise<any>;
+    getUsageColor: () => string;
+    getUsageMessage: () => string;
+    isApproachingLimit: () => boolean;
+    hasExceededLimit: () => boolean;
+    getDaysUntilReset: () => number;
+    formatUsageDisplay: () => { current: number; limit: string; percentage: number };
+  };
+};
