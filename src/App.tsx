@@ -12,6 +12,10 @@ import GeneratePage from './pages/GeneratePage';
 import DashboardPage from './pages/DashboardPage';
 import PricingPage from './pages/PricingPage';
 import AuthPage from './pages/AuthPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import RefundPage from './pages/RefundPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 
 // Styles
@@ -91,6 +95,10 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/refund" element={<RefundPage />} />
                 <Route 
                   path="/generate" 
                   element={

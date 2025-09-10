@@ -18,8 +18,8 @@ export const Footer: React.FC = () => {
     ],
     legal: [
       { name: 'Privacy Policy', href: '/privacy' },
-      { name: 'Terms of Service', href: '/terms' },
-      { name: 'Cookie Policy', href: '/cookies' },
+      { name: 'Terms & Conditions', href: '/terms' },
+      { name: 'Refund Policy', href: '/refund' },
     ],
   };
 
