@@ -11,7 +11,7 @@ import {
 
 // Storage configuration
 const STORAGE_CONFIG: StorageConfig = {
-  bucket: 'kateriss-videos',
+  bucket: 'videos',
   region: 'us-east-1',
   cdnUrl: 'https://cdn.kateriss.ai',
   maxFileSize: 200 * 1024 * 1024, // 200MB
@@ -66,9 +66,15 @@ class StorageService {
   private async initializeBucket(): Promise<void> {
     try {
       // Check if bucket exists and create if necessary
-      const { data, error } = await supabase.storage.getBucket(this.config.bucket);
+      const { data: buckets, error } = await supabase.storage.listBuckets();
       
-      if (error && error.message.includes('not found')) {
+      if (error) {
+        throw error;
+      }
+      
+      const bucketExists = buckets?.some(bucket => bucket.name === this.config.bucket);
+      
+      if (!bucketExists) {
         console.log(`📦 Creating storage bucket: ${this.config.bucket}`);
         
         const { error: createError } = await supabase.storage.createBucket(this.config.bucket, {

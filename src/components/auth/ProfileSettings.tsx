@@ -3,7 +3,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { useAuthContext} from '../contexts/AuthContext';
+import { useAuthContext, useAuthActions } from '../../contexts/AuthContext';
 import { useProfile } from '../../hooks/useProfile';
 import { Button, Input, Card, Modal, Loading, Textarea } from '../ui';
 import { showToast } from '../ui/Toast';

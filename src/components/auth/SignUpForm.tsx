@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthContext} from '../contexts/AuthContext';
+import { useAuthContext, useAuthActions } from '../../contexts/AuthContext';
 import { Button, Input, Card } from '../ui';
 import { showToast } from '../ui/Toast';
 import { config } from '../../config/env';

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuthContext} from '../contexts/AuthContext';
+import { useAuthContext, useAuthActions } from '../../contexts/AuthContext';
 import { Button, Input, Card, Loading } from '../ui';
 import { showToast } from '../ui/Toast';
 import type { SignInCredentials, AuthFormProps } from '../../types/auth';
