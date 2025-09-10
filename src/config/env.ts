@@ -1,5 +1,8 @@
-// Legacy export for compatibility
+// Legacy export for compatibility  
 export const env = import.meta.env;
+
+// Database connection status
+console.log('🗄️ Database configured:', !!import.meta.env.VITE_SUPABASE_URL);
 
 export const config = {
   supabase: {
