@@ -12,7 +12,7 @@ import GeneratePage from './pages/GeneratePage';
 import DashboardPage from './pages/DashboardPage';
 import PricingPage from './pages/PricingPage';
 import AuthPage from './pages/AuthPage';
-import AuthGuard from './components/auth/AuthGuard';
+import { AuthGuard } from './components/auth/AuthGuard';
 
 // Styles
 import './styles/globals.css';
