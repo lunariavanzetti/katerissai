@@ -1,3 +1,6 @@
+// Legacy export for compatibility
+export const env = import.meta.env;
+
 export const config = {
   supabase: {
     url: import.meta.env.VITE_SUPABASE_URL!,
