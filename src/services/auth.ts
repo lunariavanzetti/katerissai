@@ -9,7 +9,7 @@ import {
   UserResponse,
 } from '@supabase/supabase-js';
 import { supabase } from '../config/supabase';
-import { env } from '../config/env';
+import { config } from '../config/env';
 import type { 
   SignUpCredentials,
   SignInCredentials,
@@ -26,7 +26,7 @@ import type {
 
 class LoginAttemptTracker {
   private attempts: Map<string, LoginAttempt[]> = new Map();
-  private readonly maxAttempts = env.auth.maxLoginAttempts;
+  private readonly maxAttempts = config.auth.maxLoginAttempts;
   private readonly lockoutDuration = 15 * 60 * 1000; // 15 minutes
 
   isLocked(email: string): boolean {
@@ -123,7 +123,7 @@ export class AuthService {
       if (!this.isValidPassword(password)) {
         return {
           success: false,
-          error: `Password must be at least ${env.auth.passwordMinLength} characters long`
+          error: `Password must be at least ${config.auth.passwordMinLength} characters long`
         };
       }
 
@@ -136,7 +136,7 @@ export class AuthService {
             full_name: fullName?.trim() || null,
             marketing_consent: credentials.marketingConsent || false,
           },
-          emailRedirectTo: env.auth.redirectUrl,
+          emailRedirectTo: config.auth.redirectUrl,
         },
       });
 
@@ -255,7 +255,7 @@ export class AuthService {
       const { data, error }: OAuthResponse = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: env.auth.redirectUrl,
+          redirectTo: config.auth.redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -374,7 +374,7 @@ export class AuthService {
       if (!this.isValidPassword(newPassword)) {
         return {
           success: false,
-          error: `Password must be at least ${env.auth.passwordMinLength} characters long`
+          error: `Password must be at least ${config.auth.passwordMinLength} characters long`
         };
       }
 
@@ -490,7 +490,7 @@ export class AuthService {
   }
 
   private isValidPassword(password: string): boolean {
-    return password.length >= env.auth.passwordMinLength;
+    return password.length >= config.auth.passwordMinLength;
   }
 
   private handleAuthError(error: any): string {
@@ -505,7 +505,7 @@ export class AuthService {
       case 'User already registered':
         return 'An account with this email already exists';
       case 'Password should be at least 6 characters':
-        return `Password must be at least ${env.auth.passwordMinLength} characters long`;
+        return `Password must be at least ${config.auth.passwordMinLength} characters long`;
       case 'Unable to validate email address: invalid format':
         return 'Please enter a valid email address';
       case 'Email rate limit exceeded':

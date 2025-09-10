@@ -7,7 +7,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthContext} from '../contexts/AuthContext';
 import { Button, Input, Card } from '../ui';
 import { showToast } from '../ui/Toast';
-import { env } from '../../config/env';
+import { config } from '../../config/env';
 
 // =============================================================================
 // FORM DATA INTERFACES
@@ -251,7 +251,7 @@ export const ResetPasswordForm: React.FC<{ className?: string }> = ({
     if (!password) return { strength: 0, label: 'Enter a password', color: 'gray' };
     
     let strength = 0;
-    if (password.length >= env.auth.passwordMinLength) strength++;
+    if (password.length >= config.auth.passwordMinLength) strength++;
     if (/[A-Z]/.test(password)) strength++;
     if (/[a-z]/.test(password)) strength++;
     if (/\d/.test(password)) strength++;
@@ -355,8 +355,8 @@ export const ResetPasswordForm: React.FC<{ className?: string }> = ({
                 {...register('password', {
                   required: 'Password is required',
                   minLength: {
-                    value: env.auth.passwordMinLength,
-                    message: `Password must be at least ${env.auth.passwordMinLength} characters`
+                    value: config.auth.passwordMinLength,
+                    message: `Password must be at least ${config.auth.passwordMinLength} characters`
                   },
                   validate: (value) => {
                     const strength = getPasswordStrength(value);
@@ -427,10 +427,10 @@ export const ResetPasswordForm: React.FC<{ className?: string }> = ({
             <p className="font-semibold text-black mb-2">Password must contain:</p>
             <ul className="space-y-1 text-xs">
               <li className="flex items-center gap-2">
-                <span className={watchedPassword && watchedPassword.length >= env.auth.passwordMinLength ? 'text-[#00ff00]' : 'text-gray-400'}>
+                <span className={watchedPassword && watchedPassword.length >= config.auth.passwordMinLength ? 'text-[#00ff00]' : 'text-gray-400'}>
                   ✓
                 </span>
-                At least {env.auth.passwordMinLength} characters
+                At least {config.auth.passwordMinLength} characters
               </li>
               <li className="flex items-center gap-2">
                 <span className={watchedPassword && /[A-Z]/.test(watchedPassword) ? 'text-[#00ff00]' : 'text-gray-400'}>

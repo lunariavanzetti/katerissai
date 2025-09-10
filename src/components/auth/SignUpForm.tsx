@@ -7,7 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext} from '../contexts/AuthContext';
 import { Button, Input, Card } from '../ui';
 import { showToast } from '../ui/Toast';
-import { env } from '../../config/env';
+import { config } from '../../config/env';
 import type { SignUpCredentials, AuthFormProps } from '../../types/auth';
 
 // =============================================================================
@@ -43,10 +43,10 @@ const checkPasswordStrength = (password: string): PasswordStrength => {
   const feedback: string[] = [];
 
   // Length check
-  if (password.length >= env.auth.passwordMinLength) {
+  if (password.length >= config.auth.passwordMinLength) {
     score += 1;
   } else {
-    feedback.push(`At least ${env.auth.passwordMinLength} characters`);
+    feedback.push(`At least ${config.auth.passwordMinLength} characters`);
   }
 
   // Uppercase check
@@ -262,8 +262,8 @@ export const SignUpForm: React.FC<AuthFormProps> = ({
     password: {
       required: 'Password is required',
       minLength: {
-        value: env.auth.passwordMinLength,
-        message: `Password must be at least ${env.auth.passwordMinLength} characters`
+        value: config.auth.passwordMinLength,
+        message: `Password must be at least ${config.auth.passwordMinLength} characters`
       },
       validate: (value: string) => {
         const strength = checkPasswordStrength(value);

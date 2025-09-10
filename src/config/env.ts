@@ -19,6 +19,12 @@ export const config = {
     url: import.meta.env.VITE_SITE_URL || 'http://localhost:5173',
     version: '1.0.0',
   },
+  auth: {
+    maxLoginAttempts: parseInt(import.meta.env.VITE_MAX_LOGIN_ATTEMPTS) || 5,
+    lockoutDurationMinutes: parseInt(import.meta.env.VITE_LOCKOUT_DURATION_MINUTES) || 15,
+    passwordMinLength: parseInt(import.meta.env.VITE_PASSWORD_MIN_LENGTH) || 8,
+    redirectUrl: import.meta.env.VITE_AUTH_REDIRECT_URL || 'http://localhost:5173/auth/callback',
+  },
   pricing: {
     payPerVideo: parseFloat(import.meta.env.VITE_PAY_PER_VIDEO_PRICE) || 2.49,
     basicMonthly: parseFloat(import.meta.env.VITE_BASIC_MONTHLY_PRICE) || 29,
