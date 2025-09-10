@@ -3,16 +3,16 @@ export const env = import.meta.env;
 
 export const config = {
   supabase: {
-    url: import.meta.env.VITE_SUPABASE_URL!,
-    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY!,
+    url: import.meta.env.VITE_SUPABASE_URL || '',
+    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
   },
   paddle: {
-    vendorId: import.meta.env.VITE_PADDLE_VENDOR_ID!,
-    clientSideToken: import.meta.env.VITE_PADDLE_CLIENT_SIDE_TOKEN!,
-    environment: import.meta.env.VITE_PADDLE_ENVIRONMENT! as 'sandbox' | 'production',
+    vendorId: import.meta.env.VITE_PADDLE_VENDOR_ID || '',
+    clientSideToken: import.meta.env.VITE_PADDLE_CLIENT_SIDE_TOKEN || '',
+    environment: (import.meta.env.VITE_PADDLE_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production',
   },
   gemini: {
-    apiKey: import.meta.env.VITE_GEMINI_API_KEY!,
+    apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
   },
   app: {
     name: 'Kateriss AI Video Generator',
@@ -36,8 +36,13 @@ const requiredEnvVars = [
   'VITE_GEMINI_API_KEY'
 ];
 
-requiredEnvVars.forEach(envVar => {
-  if (!import.meta.env[envVar]) {
-    throw new Error(`Missing required environment variable: ${envVar}`);
-  }
-});
+// Check for missing environment variables and log warnings instead of throwing errors
+const missingEnvVars = requiredEnvVars.filter(envVar => !import.meta.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.warn(
+    '⚠️ Missing environment variables:\n' +
+    missingEnvVars.map(envVar => `  - ${envVar}`).join('\n') +
+    '\n\nSome features may not work properly. Please configure these in your deployment settings.'
+  );
+}

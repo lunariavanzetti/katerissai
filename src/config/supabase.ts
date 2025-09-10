@@ -6,7 +6,7 @@
 // =====================================================================================
 
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
-import { env } from './env';
+import { config } from './env';
 import { Database } from '../types/database';
 
 // Legacy database interface for backward compatibility
@@ -302,17 +302,38 @@ const supabaseOptions = {
   },
 };
 
-// Create enhanced Supabase client with full database types
-export const supabase: SupabaseClient<Database> = createClient(
-  env.supabase.url,
-  env.supabase.anonKey,
-  supabaseOptions
-);
+// Create enhanced Supabase client with full database types (with fallback handling)
+let supabaseClient: SupabaseClient<Database>;
+
+if (config.supabase.url && config.supabase.anonKey) {
+  supabaseClient = createClient(
+    config.supabase.url,
+    config.supabase.anonKey,
+    supabaseOptions
+  );
+} else {
+  // Create a dummy client that won't cause errors but will log warnings
+  console.warn('⚠️ Supabase credentials not configured. Creating dummy client.');
+  supabaseClient = createClient(
+    'https://dummy.supabase.co',
+    'dummy-key',
+    {
+      ...supabaseOptions,
+      auth: {
+        ...supabaseOptions.auth,
+        autoRefreshToken: false,
+        persistSession: false,
+      }
+    }
+  );
+}
+
+export const supabase: SupabaseClient<Database> = supabaseClient;
 
 // Create service role client for admin operations (if needed)
-export const supabaseAdmin = env.supabase.serviceRoleKey ? createClient(
-  env.supabase.url,
-  env.supabase.serviceRoleKey,
+export const supabaseAdmin = (config.supabase.serviceRoleKey && config.supabase.url) ? createClient(
+  config.supabase.url,
+  config.supabase.serviceRoleKey,
   {
     ...supabaseOptions,
     auth: {
@@ -554,8 +575,8 @@ export const apiKeyAuth = {
    */
   createApiKeyClient(apiKey: string): SupabaseClient<Database> {
     return createClient(
-      env.supabase.url,
-      env.supabase.anonKey,
+      config.supabase.url,
+      config.supabase.anonKey,
       {
         ...supabaseOptions,
         global: {
@@ -632,7 +653,7 @@ export const onAuthEvent = (callback: AuthEventCallback) => {
 // Enhanced auth event listeners setup
 supabase.auth.onAuthStateChange(async (event, session) => {
   // Log auth events in development
-  if (env.app.environment === 'development') {
+  if (import.meta.env.MODE === 'development') {
     console.log('🔐 Auth Event:', event, session?.user?.email);
   }
 
@@ -671,7 +692,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       break;
       
     case 'TOKEN_REFRESHED':
-      if (env.app.environment === 'development') {
+      if (import.meta.env.MODE === 'development') {
         console.log('🔄 Auth token refreshed');
       }
       break;
