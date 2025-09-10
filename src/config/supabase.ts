@@ -314,17 +314,30 @@ if (config.supabase.url && config.supabase.anonKey) {
 } else {
   // Create a dummy client that won't cause errors but will log warnings
   console.warn('⚠️ Supabase credentials not configured. Creating dummy client.');
+  
+  // Create a more complete dummy client to prevent property access errors
+  const dummyOptions = {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+      storage: undefined,
+      flowType: 'pkce' as const,
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'kateriss-ai-dummy',
+      },
+    },
+    db: {
+      schema: 'public',
+    },
+  };
+  
   supabaseClient = createClient(
     'https://dummy.supabase.co',
-    'dummy-key',
-    {
-      ...supabaseOptions,
-      auth: {
-        ...supabaseOptions.auth,
-        autoRefreshToken: false,
-        persistSession: false,
-      }
-    }
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1bW15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxMDU2MDAsImV4cCI6MTk2MDY4MTYwMH0.DummyKeyForDevelopment',
+    dummyOptions
   );
 }
 
@@ -650,8 +663,9 @@ export const onAuthEvent = (callback: AuthEventCallback) => {
   };
 };
 
-// Enhanced auth event listeners setup
-supabase.auth.onAuthStateChange(async (event, session) => {
+// Enhanced auth event listeners setup (only if we have real credentials)
+if (config.supabase.url && config.supabase.anonKey) {
+  supabase.auth.onAuthStateChange(async (event, session) => {
   // Log auth events in development
   if (import.meta.env.MODE === 'development') {
     console.log('🔐 Auth Event:', event, session?.user?.email);
@@ -711,6 +725,9 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     }
   });
 });
+} else {
+  console.log('🔒 Supabase auth event listeners disabled (missing credentials)');
+}
 
 // Initialize user if they don't exist in profiles table
 async function initializeUserIfNeeded(userId: string) {
