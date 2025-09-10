@@ -3,6 +3,7 @@
 A modern, brutalist-designed AI video generation platform powered by Google's Veo AI technology. Create stunning AI-generated videos with simple text prompts and professional-grade controls.
 
 ![Kateriss AI Video Generator](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
+![Deploy Status](https://img.shields.io/badge/Vercel-Deployed-success)
 ![Version](https://img.shields.io/badge/Version-1.0.0-blue)
 ![License](https://img.shields.io/badge/License-Private-red)
 
