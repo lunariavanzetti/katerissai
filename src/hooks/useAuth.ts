@@ -1,7 +1,7 @@
 // useAuth Hook for Kateriss AI Video Generator
 // Complete auth state management with React Query integration
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../config/supabase';
 import { authService } from '../services/auth';
@@ -52,6 +52,9 @@ export const useAuth = (): UseAuthReturn => {
     updatingPassword: false,
     refreshingSession: false,
   });
+
+  // Use ref to track initialization to prevent loops
+  const initialized = useRef(false);
 
   // ==========================================================================
   // STATE UPDATERS
@@ -312,12 +315,11 @@ export const useAuth = (): UseAuthReturn => {
 
   useEffect(() => {
     let mounted = true;
-    let initialized = false;
 
     // Initialize auth state
     const initializeAuth = async () => {
-      if (initialized) return;
-      initialized = true;
+      if (initialized.current) return;
+      initialized.current = true;
 
       try {
         setLoading(true);
@@ -342,12 +344,34 @@ export const useAuth = (): UseAuthReturn => {
           if (session?.user && mounted) {
             setAuthData(session.user, session);
             
-            // Load user profile (this has its own timeout)  
+            // Load user profile inline (with timeout)
             try {
-              await loadUserProfile(session.user.id);
+              const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Profile loading timeout')), 5000);
+              });
+
+              const profilePromise = profileService.getProfile(session.user.id);
+              const result = await Promise.race([profilePromise, timeoutPromise]) as Awaited<ReturnType<typeof profileService.getProfile>>;
+              
+              if (result.success && result.data?.profile) {
+                updateState({ profile: result.data.profile });
+              } else {
+                // Profile might not exist yet, attempt to create it
+                if (session.user.email) {
+                  const createPromise = profileService.createProfile(session.user.id, session.user.email, {
+                    full_name: session.user.user_metadata?.full_name || null,
+                  });
+                  const createResult = await Promise.race([createPromise, timeoutPromise]) as Awaited<ReturnType<typeof profileService.createProfile>>;
+                  
+                  if (createResult.success && createResult.data?.profile) {
+                    updateState({ profile: createResult.data.profile });
+                  }
+                }
+              }
             } catch (profileError) {
               console.warn('Profile loading failed during init:', profileError);
-              // Continue without profile
+              // Continue without profile to prevent infinite loading
+              updateState({ profile: null });
             }
           } else if (mounted) {
             setLoading(false);
@@ -374,7 +398,7 @@ export const useAuth = (): UseAuthReturn => {
 
     // Failsafe: Force loading to stop after 12 seconds no matter what
     const failsafeTimeout = setTimeout(() => {
-      if (mounted && state.loading) {
+      if (mounted) {
         console.warn('Failsafe: Force stopping loading after 12 seconds');
         setLoading(false);
       }
@@ -391,12 +415,8 @@ export const useAuth = (): UseAuthReturn => {
           case 'SIGNED_IN':
             if (session?.user) {
               setAuthData(session.user, session);
-              try {
-                await loadUserProfile(session.user.id);
-              } catch (error) {
-                console.warn('Profile loading failed in auth state change:', error);
-                // Continue without profile to prevent infinite loading
-              }
+              // Profile loading is handled by the initialization above
+              console.log('User signed in, profile will be loaded by initialization');
             }
             break;
 
@@ -413,12 +433,8 @@ export const useAuth = (): UseAuthReturn => {
           case 'USER_UPDATED':
             if (session?.user) {
               updateState({ user: session.user });
-              try {
-                await loadUserProfile(session.user.id);
-              } catch (error) {
-                console.warn('Profile loading failed in user updated:', error);
-                // Continue without profile to prevent infinite loading
-              }
+              // Don't reload profile on user update to avoid loops
+              console.log('User updated, keeping existing profile');
             }
             break;
 
@@ -437,7 +453,7 @@ export const useAuth = (): UseAuthReturn => {
       clearTimeout(failsafeTimeout);
       subscription.unsubscribe();
     };
-  }, [setLoading, setError, setAuthData, loadUserProfile, updateState, state.profile, state.loading]);
+  }, []); // Empty dependency array - this should only run once
 
   // ==========================================================================
   // SESSION MONITORING
