@@ -65,36 +65,25 @@ class StorageService {
 
   private async initializeBucket(): Promise<void> {
     try {
-      // Check if bucket exists and create if necessary
-      const { data: buckets, error } = await supabase.storage.listBuckets();
+      // Test bucket access by attempting to list files in root
+      const { data, error } = await supabase.storage
+        .from(this.config.bucket)
+        .list('', { limit: 1 });
       
       if (error) {
-        throw error;
-      }
-      
-      const bucketExists = buckets?.some(bucket => bucket.name === this.config.bucket);
-      
-      if (!bucketExists) {
-        console.log(`📦 Creating storage bucket: ${this.config.bucket}`);
-        
-        const { error: createError } = await supabase.storage.createBucket(this.config.bucket, {
-          public: true,
-          allowedMimeTypes: this.getAllowedMimeTypes(),
-          fileSizeLimit: this.config.maxFileSize,
-        });
-
-        if (createError) {
-          console.error('Failed to create storage bucket:', createError);
+        // If bucket doesn't exist, the error will indicate that
+        if (error.message.includes('not found') || error.message.includes('does not exist')) {
+          console.log(`📦 Storage bucket '${this.config.bucket}' needs to be created manually in Supabase dashboard`);
+          console.log('📝 Please create the bucket in your Supabase project dashboard');
         } else {
-          console.log('✅ Storage bucket created successfully');
+          console.warn('Storage bucket access error:', error.message);
         }
-      } else if (data) {
-        console.log('📦 Storage bucket already exists');
-      } else if (error) {
-        console.error('Error checking storage bucket:', error);
+      } else {
+        console.log(`✅ Storage bucket '${this.config.bucket}' is accessible`);
       }
     } catch (error) {
-      console.error('Failed to initialize storage bucket:', error);
+      console.warn('Failed to initialize storage bucket:', error);
+      // Don't throw error - allow app to continue functioning
     }
   }
 

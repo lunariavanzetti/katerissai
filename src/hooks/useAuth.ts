@@ -94,16 +94,24 @@ export const useAuth = (): UseAuthReturn => {
 
   const loadUserProfile = useCallback(async (userId: string) => {
     try {
-      const result = await profileService.getProfile(userId);
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile loading timeout')), 10000);
+      });
+
+      const profilePromise = profileService.getProfile(userId);
+      const result = await Promise.race([profilePromise, timeoutPromise]) as Awaited<ReturnType<typeof profileService.getProfile>>;
+      
       if (result.success && result.data?.profile) {
         updateState({ profile: result.data.profile });
       } else {
         // Profile might not exist yet, attempt to create it
         const user = state.user;
         if (user?.email) {
-          const createResult = await profileService.createProfile(userId, user.email, {
+          const createPromise = profileService.createProfile(userId, user.email, {
             full_name: user.user_metadata?.full_name || null,
           });
+          const createResult = await Promise.race([createPromise, timeoutPromise]) as Awaited<ReturnType<typeof profileService.createProfile>>;
           
           if (createResult.success && createResult.data?.profile) {
             updateState({ profile: createResult.data.profile });
@@ -113,6 +121,8 @@ export const useAuth = (): UseAuthReturn => {
     } catch (error) {
       console.error('Error loading user profile:', error);
       // Don't set error state for profile loading failures
+      // Instead, continue without profile to prevent infinite loading
+      updateState({ profile: null });
     }
   }, [state.user, updateState]);
 
@@ -308,30 +318,45 @@ export const useAuth = (): UseAuthReturn => {
       try {
         setLoading(true);
         
-        // Get current session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Session initialization error:', error);
-          if (mounted) {
-            setError('Failed to initialize authentication');
-          }
-          return;
-        }
+        // Add overall timeout for initialization
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 15000);
+        });
 
-        if (session?.user && mounted) {
-          setAuthData(session.user, session);
+        const initPromise = async () => {
+          // Get current session
+          const { data: { session }, error } = await supabase.auth.getSession();
           
-          // Load user profile
-          await loadUserProfile(session.user.id);
-        } else if (mounted) {
-          setLoading(false);
-        }
+          if (error) {
+            console.error('Session initialization error:', error);
+            if (mounted) {
+              setError('Failed to initialize authentication');
+            }
+            return;
+          }
+
+          if (session?.user && mounted) {
+            setAuthData(session.user, session);
+            
+            // Load user profile (this has its own timeout)
+            await loadUserProfile(session.user.id);
+          } else if (mounted) {
+            setLoading(false);
+          }
+        };
+
+        await Promise.race([initPromise(), timeoutPromise]);
 
       } catch (error) {
         console.error('Auth initialization error:', error);
         if (mounted) {
-          setError('Failed to initialize authentication');
+          // If it's a timeout or any error, continue without profile
+          setLoading(false);
+          if (error instanceof Error && error.message.includes('timeout')) {
+            console.warn('Auth initialization timed out, continuing without profile');
+          } else {
+            setError('Failed to initialize authentication');
+          }
         }
       }
     };
