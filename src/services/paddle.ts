@@ -85,10 +85,9 @@ class PaddleService {
           environment: this.environment
         });
 
-        // Use the most compatible setup method
+        // Use the most compatible setup method (token only for this Paddle SDK version)
         window.Paddle.Setup({
-          token: this.clientSideToken,
-          environment: this.environment
+          token: this.clientSideToken
         });
 
         this.initialized = true;
