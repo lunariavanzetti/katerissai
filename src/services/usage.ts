@@ -33,9 +33,9 @@ class UsageService {
     try {
       const usageEventData = {
         user_id: data.userId,
-        type: data.type,
-        count: data.count,
-        timestamp: new Date().toISOString(),
+        event_type: data.type,
+        credits_used: data.count,
+        created_at: new Date().toISOString(),
         metadata: data.metadata || {}
       };
 
@@ -49,11 +49,15 @@ class UsageService {
         throw new Error(`Failed to record usage: ${error.message}`);
       }
 
-      // Update current usage data
-      await this.updateCurrentUsage(data.userId);
-
-      return this.mapDatabaseToUsageEvent(usageEvent);
-    } catch (error) {
+      return {
+        id: usageEvent.id,
+        userId: usageEvent.user_id,
+        type: usageEvent.event_type as UsageEventType,
+        count: usageEvent.credits_used,
+        timestamp: usageEvent.created_at,
+        metadata: usageEvent.metadata || {}
+      };
+    } catch (error: any) {
       console.error('Failed to record usage:', error);
       throw error;
     }
@@ -64,29 +68,28 @@ class UsageService {
    */
   async getCurrentUsage(userId: string): Promise<UsageData> {
     try {
-      // Get user's current subscription
-      const subscription = await subscriptionService.getSubscriptionByUserId(userId);
+      const subscription = await subscriptionService.getUserSubscription(userId);
+      const limits = this.getUsageLimits(subscription?.plan || 'pay-per-video');
       
-      // Determine current period based on subscription or monthly cycle
-      const { currentPeriodStart, currentPeriodEnd } = this.getCurrentPeriod(subscription);
-      
-      // Get plan limits
-      const limits = await subscriptionService.getSubscriptionLimits(userId);
+      // Calculate current billing period
+      const now = new Date();
+      const currentPeriodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const currentPeriodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
       
       // Count videos generated in current period
       const { data: usageEvents, error } = await supabase
         .from('usage_events')
-        .select('count')
+        .select('credits_used')
         .eq('user_id', userId)
-        .eq('type', 'video_generated')
-        .gte('timestamp', currentPeriodStart.toISOString())
-        .lte('timestamp', currentPeriodEnd.toISOString());
+        .eq('event_type', 'video_generated')
+        .gte('created_at', currentPeriodStart.toISOString())
+        .lte('created_at', currentPeriodEnd.toISOString());
 
       if (error) {
         throw new Error(`Failed to get usage data: ${error.message}`);
       }
 
-      const videosGenerated = usageEvents.reduce((total, event) => total + event.count, 0);
+      const videosGenerated = usageEvents.reduce((total, event) => total + event.credits_used, 0);
       const videoLimit = limits.videoLimit;
       const remainingVideos = videoLimit ? Math.max(0, videoLimit - videosGenerated) : null;
       const usagePercentage = videoLimit ? Math.min(100, (videosGenerated / videoLimit) * 100) : 0;
@@ -101,375 +104,197 @@ class UsageService {
       // Get last video generation timestamp
       const { data: lastVideoEvent } = await supabase
         .from('usage_events')
-        .select('timestamp')
+        .select('created_at')
         .eq('user_id', userId)
-        .eq('type', 'video_generated')
-        .order('timestamp', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .eq('event_type', 'video_generated')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const lastVideoTimestamp = lastVideoEvent?.[0]?.created_at
+        ? new Date(lastVideoEvent[0].created_at).toISOString()
+        : null;
 
       return {
         userId,
-        subscriptionId: subscription?.id,
-        currentPeriodStart,
-        currentPeriodEnd,
-        videosGenerated,
-        videoLimit,
-        remainingVideos,
-        usagePercentage,
-        resetDate: currentPeriodEnd,
-        overageCount,
-        overageCharges,
-        lastVideoAt: lastVideoEvent ? new Date(lastVideoEvent.timestamp) : undefined
+        period: {
+          start: currentPeriodStart,
+          end: currentPeriodEnd,
+          videosGenerated,
+          videoLimit,
+          overageCount,
+        },
+        limits,
+        usage: {
+          videosGenerated,
+          videoLimit,
+          remainingVideos,
+          usagePercentage: Math.round(usagePercentage),
+          overageCount,
+          overageCharges,
+          resetDate: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+          lastVideoGenerated: lastVideoTimestamp,
+        },
+        subscription: subscription ? {
+          tier: subscription.plan,
+          status: subscription.status,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd || false,
+        } : null,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to get current usage:', error);
       throw error;
     }
   }
 
   /**
-   * Check if user can generate more videos
-   */
-  async canGenerateVideo(userId: string): Promise<{
-    canGenerate: boolean;
-    reason?: string;
-    videosRemaining?: number;
-    requiresUpgrade?: boolean;
-  }> {
-    try {
-      const usage = await this.getCurrentUsage(userId);
-      
-      // Premium users have unlimited videos
-      if (usage.videoLimit === null) {
-        return { canGenerate: true };
-      }
-
-      // Check if user has remaining videos in their limit
-      if (usage.remainingVideos !== null && usage.remainingVideos > 0) {
-        return { 
-          canGenerate: true, 
-          videosRemaining: usage.remainingVideos 
-        };
-      }
-
-      // Check if user has reached their limit
-      if (usage.videosGenerated >= usage.videoLimit) {
-        return {
-          canGenerate: false,
-          reason: `You've reached your monthly limit of ${usage.videoLimit} videos`,
-          requiresUpgrade: true
-        };
-      }
-
-      return { canGenerate: true };
-    } catch (error) {
-      console.error('Failed to check video generation limit:', error);
-      return { 
-        canGenerate: false, 
-        reason: 'Unable to verify usage limits' 
-      };
-    }
-  }
-
-  /**
-   * Get usage history for a user
+   * Get usage history for a period
    */
   async getUsageHistory(
-    userId: string, 
-    startDate?: Date, 
-    endDate?: Date, 
-    limit: number = 100
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    eventType?: UsageEventType
   ): Promise<UsageEvent[]> {
     try {
       let query = supabase
         .from('usage_events')
         .select('*')
         .eq('user_id', userId)
-        .order('timestamp', { ascending: false })
-        .limit(limit);
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .order('created_at', { ascending: false });
 
-      if (startDate) {
-        query = query.gte('timestamp', startDate.toISOString());
+      if (eventType) {
+        query = query.eq('event_type', eventType);
       }
 
-      if (endDate) {
-        query = query.lte('timestamp', endDate.toISOString());
-      }
-
-      const { data: usageEvents, error } = await query;
+      const { data: events, error } = await query;
 
       if (error) {
         throw new Error(`Failed to get usage history: ${error.message}`);
       }
 
-      return usageEvents.map(this.mapDatabaseToUsageEvent);
-    } catch (error) {
+      return events.map(event => ({
+        id: event.id,
+        userId: event.user_id,
+        type: event.event_type as UsageEventType,
+        count: event.credits_used,
+        timestamp: event.created_at,
+        metadata: event.metadata || {},
+        videoId: event.video_id,
+      }));
+    } catch (error: any) {
       console.error('Failed to get usage history:', error);
       throw error;
     }
   }
 
   /**
-   * Get usage statistics by period
+   * Check if user can generate videos based on limits
    */
-  async getUsageStatistics(
-    userId: string,
-    periodType: 'daily' | 'weekly' | 'monthly' = 'monthly',
-    periods: number = 12
-  ): Promise<UsagePeriod[]> {
-    try {
-      const subscription = await subscriptionService.getSubscriptionByUserId(userId);
-      const limits = await subscriptionService.getSubscriptionLimits(userId);
-      
-      const periodsData: UsagePeriod[] = [];
-      
-      for (let i = 0; i < periods; i++) {
-        const { start, end } = this.getPeriodDates(periodType, i);
-        
-        const { data: usageEvents, error } = await supabase
-          .from('usage_events')
-          .select('count')
-          .eq('user_id', userId)
-          .eq('type', 'video_generated')
-          .gte('timestamp', start.toISOString())
-          .lte('timestamp', end.toISOString());
-
-        if (error) {
-          throw new Error(`Failed to get usage statistics: ${error.message}`);
-        }
-
-        const videosGenerated = usageEvents.reduce((total, event) => total + event.count, 0);
-        const overageCount = limits.videoLimit ? Math.max(0, videosGenerated - limits.videoLimit) : 0;
-
-        periodsData.push({
-          start,
-          end,
-          videosGenerated,
-          videoLimit: limits.videoLimit,
-          overageCount
-        });
-      }
-
-      return periodsData.reverse(); // Most recent first
-    } catch (error) {
-      console.error('Failed to get usage statistics:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Reset usage for a new period
-   */
-  async resetUsage(userId: string, reason: string = 'Period reset'): Promise<void> {
-    try {
-      await this.recordUsage({
-        userId,
-        type: 'subscription_reset',
-        count: 0,
-        metadata: { reason }
-      });
-    } catch (error) {
-      console.error('Failed to reset usage:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get top usage periods
-   */
-  async getTopUsagePeriods(
-    userId: string,
-    limit: number = 5
-  ): Promise<{
-    period: string;
-    videosGenerated: number;
-    overageCount: number;
-  }[]> {
-    try {
-      const statistics = await this.getUsageStatistics(userId, 'monthly', 12);
-      
-      return statistics
-        .map(stat => ({
-          period: `${stat.start.getFullYear()}-${(stat.start.getMonth() + 1).toString().padStart(2, '0')}`,
-          videosGenerated: stat.videosGenerated,
-          overageCount: stat.overageCount
-        }))
-        .sort((a, b) => b.videosGenerated - a.videosGenerated)
-        .slice(0, limit);
-    } catch (error) {
-      console.error('Failed to get top usage periods:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Calculate usage trends
-   */
-  async getUsageTrends(userId: string): Promise<{
-    currentMonthUsage: number;
-    previousMonthUsage: number;
-    changePercentage: number;
-    trend: 'increasing' | 'decreasing' | 'stable';
-    averageDaily: number;
-  }> {
-    try {
-      const statistics = await this.getUsageStatistics(userId, 'monthly', 2);
-      
-      if (statistics.length < 2) {
-        return {
-          currentMonthUsage: statistics[0]?.videosGenerated || 0,
-          previousMonthUsage: 0,
-          changePercentage: 0,
-          trend: 'stable',
-          averageDaily: 0
-        };
-      }
-
-      const currentMonthUsage = statistics[0].videosGenerated;
-      const previousMonthUsage = statistics[1].videosGenerated;
-      
-      const changePercentage = previousMonthUsage > 0 
-        ? ((currentMonthUsage - previousMonthUsage) / previousMonthUsage) * 100 
-        : 0;
-
-      let trend: 'increasing' | 'decreasing' | 'stable' = 'stable';
-      if (changePercentage > 5) trend = 'increasing';
-      else if (changePercentage < -5) trend = 'decreasing';
-
-      // Calculate average daily usage for current month
-      const daysInMonth = new Date().getDate();
-      const averageDaily = currentMonthUsage / daysInMonth;
-
-      return {
-        currentMonthUsage,
-        previousMonthUsage,
-        changePercentage: Math.round(changePercentage * 100) / 100,
-        trend,
-        averageDaily: Math.round(averageDaily * 100) / 100
-      };
-    } catch (error) {
-      console.error('Failed to get usage trends:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update current usage cache
-   */
-  private async updateCurrentUsage(userId: string): Promise<void> {
+  async canGenerateVideo(userId: string): Promise<boolean> {
     try {
       const usage = await this.getCurrentUsage(userId);
       
-      // Update or insert current usage record
-      const { error } = await supabase
-        .from('current_usage')
-        .upsert({
-          user_id: userId,
-          videos_generated: usage.videosGenerated,
-          video_limit: usage.videoLimit,
-          remaining_videos: usage.remainingVideos,
-          usage_percentage: usage.usagePercentage,
-          overage_count: usage.overageCount,
-          overage_charges: usage.overageCharges,
-          current_period_start: usage.currentPeriodStart.toISOString(),
-          current_period_end: usage.currentPeriodEnd.toISOString(),
-          last_updated: new Date().toISOString()
-        });
-
-      if (error) {
-        console.warn('Failed to update usage cache:', error.message);
+      // Pay-per-video users can always generate (they pay per video)
+      if (usage.subscription?.tier === 'pay-per-video') {
+        return true;
       }
+      
+      // Other tiers check against their limits
+      return usage.usage.remainingVideos === null || usage.usage.remainingVideos > 0;
     } catch (error) {
-      console.warn('Failed to update usage cache:', error);
+      console.error('Failed to check video generation capability:', error);
+      return false;
     }
   }
 
   /**
-   * Get current period dates based on subscription or default monthly cycle
+   * Get usage limits for a subscription tier
    */
-  private getCurrentPeriod(subscription: any): { currentPeriodStart: Date; currentPeriodEnd: Date } {
-    if (subscription && subscription.currentPeriodStart && subscription.currentPeriodEnd) {
-      return {
-        currentPeriodStart: subscription.currentPeriodStart,
-        currentPeriodEnd: subscription.currentPeriodEnd
-      };
-    }
+  private getUsageLimits(tier: PricingTier) {
+    const limits = {
+      'pay-per-video': {
+        videoLimit: null, // No limit, pay per video
+        storageLimit: 1, // GB
+        apiCallsLimit: null,
+        supportLevel: 'community',
+      },
+      'basic': {
+        videoLimit: 50,
+        storageLimit: 10, // GB  
+        apiCallsLimit: 1000,
+        supportLevel: 'email',
+      },
+      'premium': {
+        videoLimit: null, // Unlimited
+        storageLimit: 100, // GB
+        apiCallsLimit: null,
+        supportLevel: 'priority',
+      },
+    };
 
-    // Default to calendar month
-    const now = new Date();
-    const currentPeriodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const currentPeriodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
-    return { currentPeriodStart, currentPeriodEnd };
+    return limits[tier] || limits['pay-per-video'];
   }
 
   /**
-   * Calculate overage charges based on plan
+   * Calculate overage charges for basic plan
    */
-  private calculateOverageCharges(plan: PricingTier, overageCount: number): number {
-    if (plan !== 'basic' || overageCount <= 0) {
+  private calculateOverageCharges(tier: PricingTier, overageCount: number): number {
+    if (tier !== 'basic' || overageCount <= 0) {
       return 0;
     }
 
-    // Basic plan overage rate: $2.49 per additional video
-    return overageCount * 2.49;
+    // Basic plan: $0.50 per video over limit
+    return overageCount * 0.5;
   }
 
   /**
-   * Get period dates for statistics
+   * Record video generation usage
    */
-  private getPeriodDates(periodType: 'daily' | 'weekly' | 'monthly', periodsAgo: number): { start: Date; end: Date } {
-    const now = new Date();
+  async recordVideoGeneration(userId: string, videoId: string, creditsUsed: number = 1): Promise<void> {
+    await this.recordUsage({
+      userId,
+      type: 'video_generated',
+      count: creditsUsed,
+      metadata: { videoId }
+    });
+  }
+
+  /**
+   * Get monthly usage summary
+   */
+  async getMonthlyUsage(userId: string, year: number, month: number): Promise<UsagePeriod> {
+    const periodStart = new Date(year, month - 1, 1);
+    const periodEnd = new Date(year, month, 0, 23, 59, 59);
     
-    switch (periodType) {
-      case 'daily':
-        const dailyStart = new Date(now);
-        dailyStart.setDate(dailyStart.getDate() - periodsAgo);
-        dailyStart.setHours(0, 0, 0, 0);
-        
-        const dailyEnd = new Date(dailyStart);
-        dailyEnd.setHours(23, 59, 59, 999);
-        
-        return { start: dailyStart, end: dailyEnd };
-        
-      case 'weekly':
-        const weeklyStart = new Date(now);
-        weeklyStart.setDate(weeklyStart.getDate() - (periodsAgo * 7));
-        weeklyStart.setHours(0, 0, 0, 0);
-        
-        const weeklyEnd = new Date(weeklyStart);
-        weeklyEnd.setDate(weeklyEnd.getDate() + 6);
-        weeklyEnd.setHours(23, 59, 59, 999);
-        
-        return { start: weeklyStart, end: weeklyEnd };
-        
-      case 'monthly':
-        const monthlyStart = new Date(now.getFullYear(), now.getMonth() - periodsAgo, 1);
-        const monthlyEnd = new Date(now.getFullYear(), now.getMonth() - periodsAgo + 1, 0, 23, 59, 59, 999);
-        
-        return { start: monthlyStart, end: monthlyEnd };
-        
-      default:
-        throw new Error(`Unsupported period type: ${periodType}`);
-    }
-  }
+    const { data: events, error } = await supabase
+      .from('usage_events')
+      .select('credits_used')
+      .eq('user_id', userId)
+      .eq('event_type', 'video_generated')
+      .gte('created_at', periodStart.toISOString())
+      .lte('created_at', periodEnd.toISOString());
 
-  /**
-   * Map database record to UsageEvent type
-   */
-  private mapDatabaseToUsageEvent(dbUsageEvent: any): UsageEvent {
+    if (error) {
+      throw new Error(`Failed to get monthly usage: ${error.message}`);
+    }
+
+    const videosGenerated = events.reduce((total, event) => total + event.credits_used, 0);
+    const subscription = await subscriptionService.getUserSubscription(userId);
+    const limits = this.getUsageLimits(subscription?.plan || 'pay-per-video');
+    const videoLimit = limits.videoLimit;
+    const overageCount = videoLimit ? Math.max(0, videosGenerated - videoLimit) : 0;
+
     return {
-      id: dbUsageEvent.id,
-      userId: dbUsageEvent.user_id,
-      type: dbUsageEvent.type,
-      count: dbUsageEvent.count,
-      timestamp: new Date(dbUsageEvent.timestamp),
-      metadata: dbUsageEvent.metadata || {}
+      start: periodStart,
+      end: periodEnd,
+      videosGenerated,
+      videoLimit,
+      overageCount,
     };
   }
 }
 
-// Export singleton instance
 export const usageService = new UsageService();
-export default usageService;
