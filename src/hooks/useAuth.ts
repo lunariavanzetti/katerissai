@@ -487,6 +487,16 @@ export const useAuth = (): UseAuthReturn => {
   // RETURN HOOK INTERFACE
   // ==========================================================================
 
+  // Debug logging to identify auth state issues
+  console.log('🔐 Auth Hook State:', {
+    hasUser: !!state.user,
+    userId: state.user?.id,
+    email: state.user?.email,
+    isAuthenticated: state.isAuthenticated,
+    loading: state.loading || state.signingIn || state.signingUp,
+    hasSession: !!state.session
+  });
+
   return {
     // State
     user: state.user,

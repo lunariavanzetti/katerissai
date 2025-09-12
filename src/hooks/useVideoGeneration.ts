@@ -20,6 +20,7 @@ import { veoAPI } from '../services/veoAPI';
 import { queueService } from '../services/queue';
 import { videoProcessor } from '../services/videoProcessor';
 import { useAuth } from './useAuth';
+import { useSubscription } from './useSubscription';
 
 // Hook configuration
 interface UseVideoGenerationConfig {
@@ -67,6 +68,7 @@ interface UseVideoGenerationReturn {
 
 export function useVideoGeneration(config: UseVideoGenerationConfig = {}): UseVideoGenerationReturn {
   const { user } = useAuth();
+  const { subscription, hasActiveSubscription, canGenerateVideo } = useSubscription();
   const queryClient = useQueryClient();
   
   // Configuration
@@ -182,6 +184,11 @@ export function useVideoGeneration(config: UseVideoGenerationConfig = {}): UseVi
   const generateVideoMutation = useMutation({
     mutationFn: async (request: CreateVideoRequest) => {
       if (!user?.id) throw new Error('User not authenticated');
+
+      // Check subscription status
+      if (!hasActiveSubscription && !canGenerateVideo) {
+        throw new Error('Active subscription required. Please upgrade your plan to generate videos.');
+      }
 
       // Validate settings
       const validationErrors = validateSettings(request.settings);
