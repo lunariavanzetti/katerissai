@@ -91,7 +91,7 @@ class PaddleService {
         });
 
         this.initialized = true;
-        console.log('✅ Paddle initialized successfully');
+        console.log('✅ Paddle initialized successfully - SDK ready for checkout');
       }
     } catch (error) {
       console.error('❌ Failed to initialize Paddle:', error);
