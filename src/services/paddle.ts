@@ -81,8 +81,9 @@ class PaddleService {
       // Setup Paddle with configuration
       if (window.Paddle && this.clientSideToken) {
         window.Paddle.Setup({
-          environment: this.environment,
-          token: this.clientSideToken
+          vendor: parseInt(this.vendorId),
+          token: this.clientSideToken,
+          ...(this.environment === 'sandbox' && { sandbox: true })
         });
 
         this.initialized = true;
