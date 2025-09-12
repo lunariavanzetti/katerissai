@@ -19,7 +19,7 @@ import {
 import { veoAPI } from '../services/veoAPI';
 import { queueService } from '../services/queue';
 import { videoProcessor } from '../services/videoProcessor';
-import { useAuth } from './useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 import { useSubscription } from './useSubscription';
 
 // Hook configuration
@@ -67,7 +67,7 @@ interface UseVideoGenerationReturn {
 }
 
 export function useVideoGeneration(config: UseVideoGenerationConfig = {}): UseVideoGenerationReturn {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const { subscription, hasActiveSubscription, canGenerateVideo } = useSubscription();
   const queryClient = useQueryClient();
   
@@ -183,7 +183,13 @@ export function useVideoGeneration(config: UseVideoGenerationConfig = {}): UseVi
   // Generate video mutation
   const generateVideoMutation = useMutation({
     mutationFn: async (request: CreateVideoRequest) => {
-      if (!user?.id) throw new Error('User not authenticated');
+      console.log('🔧 Generate video mutation - user object:', user);
+      console.log('🔧 Generate video mutation - user.id:', user?.id);
+      
+      if (!user?.id) {
+        console.error('❌ User not authenticated in generateVideoMutation:', { user, userId: user?.id });
+        throw new Error('User not authenticated');
+      }
 
       // Check subscription status
       if (!hasActiveSubscription && !canGenerateVideo) {
@@ -334,6 +340,11 @@ export function useVideoGeneration(config: UseVideoGenerationConfig = {}): UseVi
   // Enhance prompt mutation
   const enhancePromptMutation = useMutation({
     mutationFn: async (prompt: string) => {
+      // Double-check subscription before API call
+      if (!hasActiveSubscription && !canGenerateVideo) {
+        throw new Error('Active subscription required for prompt enhancement');
+      }
+      
       const response = await veoAPI.enhancePrompt(prompt);
       return response;
     },
@@ -397,6 +408,12 @@ export function useVideoGeneration(config: UseVideoGenerationConfig = {}): UseVi
   }, [settings]);
 
   const enhancePrompt = useCallback(async (prompt: string): Promise<string> => {
+    // Check subscription before allowing prompt enhancement
+    if (!hasActiveSubscription && !canGenerateVideo) {
+      console.warn('⚠️ Prompt enhancement requires active subscription');
+      return prompt; // Return original prompt without enhancement
+    }
+
     try {
       const enhanced = await enhancePromptMutation.mutateAsync(prompt);
       return enhanced;
@@ -404,7 +421,7 @@ export function useVideoGeneration(config: UseVideoGenerationConfig = {}): UseVi
       console.error('Failed to enhance prompt:', error);
       return prompt; // Return original on failure
     }
-  }, [enhancePromptMutation]);
+  }, [enhancePromptMutation, hasActiveSubscription, canGenerateVideo]);
 
   const validateSettings = useCallback((settingsToValidate: VideoGenerationSettings): string[] => {
     const errors: string[] = [];

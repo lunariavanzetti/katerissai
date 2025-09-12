@@ -17,7 +17,7 @@ import {
 import { supabase } from '../config/supabase';
 import { storageService } from '../services/storage';
 import { videoProcessor } from '../services/videoProcessor';
-import { useAuth } from './useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 
 // Hook configuration
 interface UseVideoLibraryConfig {
@@ -101,7 +101,7 @@ const DEFAULT_PAGINATION: VideoPaginationOptions = {
 };
 
 export function useVideoLibrary(config: UseVideoLibraryConfig = {}): UseVideoLibraryReturn {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const queryClient = useQueryClient();
 
   // Configuration

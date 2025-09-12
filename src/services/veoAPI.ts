@@ -305,38 +305,21 @@ class VeoAPIService {
     };
   }
 
-  // Enhance prompt using Gemini
+  // Enhance prompt using Gemini - DISABLED to prevent unauthorized API calls
   public async enhancePrompt(prompt: string): Promise<string> {
-    try {
-      const response = await this.retryWithBackoff(async () => {
-        return this.client.post('/models/gemini-pro:generateContent', {
-          contents: [{
-            parts: [{
-              text: `Enhance this video generation prompt to be more detailed and visually descriptive while maintaining the original intent. Make it suitable for AI video generation. Original prompt: "${prompt}"`
-            }]
-          }],
-          generationConfig: {
-            maxOutputTokens: 200,
-            temperature: 0.7,
-          }
-        });
-      });
-
-      const enhancedText = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
-      return enhancedText || prompt;
-    } catch (error) {
-      console.warn('Failed to enhance prompt:', error);
-      return prompt; // Return original if enhancement fails
-    }
+    // Return original prompt without enhancement to prevent unauthorized API calls
+    console.warn('⚠️ Prompt enhancement disabled - requires active subscription');
+    return prompt;
   }
 
   // Start video generation
   public async generateVideo(request: VeoGenerationRequest): Promise<ApiResponse<VeoGenerationResponse>> {
     try {
-      // Enhance prompt if requested
+      // Enhance prompt if requested - DISABLED for unauthorized users
       let finalPrompt = request.prompt;
       if (request.enhancePrompt) {
-        finalPrompt = await this.enhancePrompt(request.prompt);
+        console.warn('⚠️ Prompt enhancement skipped - requires subscription validation');
+        // Skip enhancement to prevent unauthorized API calls
       }
 
       const response = await this.retryWithBackoff(async () => {

@@ -11,7 +11,7 @@ import {
   ApiResponse,
 } from '../types/video';
 import { queueService, QueueEvent, QueueEventData } from '../services/queue';
-import { useAuth } from './useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 
 // Hook configuration
 interface UseQueueConfig {
@@ -77,7 +77,7 @@ const DEFAULT_QUEUE_STATE: QueueState = {
 };
 
 export function useQueue(config: UseQueueConfig = {}): UseQueueReturn {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const queryClient = useQueryClient();
 
   // Configuration

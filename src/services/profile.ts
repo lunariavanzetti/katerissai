@@ -420,7 +420,7 @@ export class ProfileService {
     // Validate website
     if (data.website !== undefined && data.website !== null) {
       const validatedUrl = this.validateWebsiteUrl(data.website);
-      if (!validatedUrl && data.website.trim().length > 0) {
+      if (!validatedUrl && typeof data.website === 'string' && data.website.trim().length > 0) {
         return { valid: false, error: 'Please enter a valid website URL' };
       }
     }
@@ -433,11 +433,11 @@ export class ProfileService {
 
     // Sanitize strings
     if (data.full_name !== undefined) {
-      sanitized.full_name = data.full_name ? data.full_name.trim() : null;
+      sanitized.full_name = (data.full_name && typeof data.full_name === 'string') ? data.full_name.trim() : null;
     }
 
     if (data.bio !== undefined) {
-      sanitized.bio = data.bio ? data.bio.trim() : null;
+      sanitized.bio = (data.bio && typeof data.bio === 'string') ? data.bio.trim() : null;
     }
 
     if (data.website !== undefined) {
@@ -456,7 +456,7 @@ export class ProfileService {
   }
 
   private validateWebsiteUrl(url: string | null | undefined): string | null {
-    if (!url || url.trim().length === 0) {
+    if (!url || typeof url !== 'string' || url.trim().length === 0) {
       return null;
     }
 
