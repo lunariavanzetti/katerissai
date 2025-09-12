@@ -312,9 +312,13 @@ export const useAuth = (): UseAuthReturn => {
 
   useEffect(() => {
     let mounted = true;
+    let initialized = false;
 
     // Initialize auth state
     const initializeAuth = async () => {
+      if (initialized) return;
+      initialized = true;
+
       try {
         setLoading(true);
         
@@ -338,8 +342,13 @@ export const useAuth = (): UseAuthReturn => {
           if (session?.user && mounted) {
             setAuthData(session.user, session);
             
-            // Load user profile (this has its own timeout)
-            await loadUserProfile(session.user.id);
+            // Load user profile (this has its own timeout)  
+            try {
+              await loadUserProfile(session.user.id);
+            } catch (profileError) {
+              console.warn('Profile loading failed during init:', profileError);
+              // Continue without profile
+            }
           } else if (mounted) {
             setLoading(false);
           }
@@ -363,6 +372,14 @@ export const useAuth = (): UseAuthReturn => {
 
     initializeAuth();
 
+    // Failsafe: Force loading to stop after 12 seconds no matter what
+    const failsafeTimeout = setTimeout(() => {
+      if (mounted && state.loading) {
+        console.warn('Failsafe: Force stopping loading after 12 seconds');
+        setLoading(false);
+      }
+    }, 12000);
+
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -374,7 +391,12 @@ export const useAuth = (): UseAuthReturn => {
           case 'SIGNED_IN':
             if (session?.user) {
               setAuthData(session.user, session);
-              await loadUserProfile(session.user.id);
+              try {
+                await loadUserProfile(session.user.id);
+              } catch (error) {
+                console.warn('Profile loading failed in auth state change:', error);
+                // Continue without profile to prevent infinite loading
+              }
             }
             break;
 
@@ -391,7 +413,12 @@ export const useAuth = (): UseAuthReturn => {
           case 'USER_UPDATED':
             if (session?.user) {
               updateState({ user: session.user });
-              await loadUserProfile(session.user.id);
+              try {
+                await loadUserProfile(session.user.id);
+              } catch (error) {
+                console.warn('Profile loading failed in user updated:', error);
+                // Continue without profile to prevent infinite loading
+              }
             }
             break;
 
@@ -407,9 +434,10 @@ export const useAuth = (): UseAuthReturn => {
 
     return () => {
       mounted = false;
+      clearTimeout(failsafeTimeout);
       subscription.unsubscribe();
     };
-  }, [setLoading, setError, setAuthData, loadUserProfile, updateState, state.profile]);
+  }, [setLoading, setError, setAuthData, loadUserProfile, updateState, state.profile, state.loading]);
 
   // ==========================================================================
   // SESSION MONITORING
