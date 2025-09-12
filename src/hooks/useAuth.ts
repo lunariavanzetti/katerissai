@@ -324,7 +324,7 @@ export const useAuth = (): UseAuthReturn => {
   useEffect(() => {
     let mounted = true;
 
-    // Initialize auth state
+    // Simple initialization - just get the session and set up the listener
     const initializeAuth = async () => {
       if (initialized.current) return;
       initialized.current = true;
@@ -332,85 +332,42 @@ export const useAuth = (): UseAuthReturn => {
       try {
         setLoading(true);
         
-        // Add overall timeout for initialization
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 8000);
-        });
-
-        const initPromise = async () => {
-          // Get current session
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            console.error('Session initialization error:', error);
-            if (mounted) {
-              setError('Failed to initialize authentication');
-            }
-            return;
+        // Get current session without profile loading complexity
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session initialization error:', error);
+          if (mounted) {
+            setError('Failed to initialize authentication');
           }
+          return;
+        }
 
-          if (session?.user && mounted) {
-            setAuthData(session.user, session);
-            
-            // Load user profile inline (with timeout)
-            try {
-              const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Profile loading timeout')), 5000);
-              });
-
-              const profilePromise = profileService.getProfile(session.user.id);
-              const result = await Promise.race([profilePromise, timeoutPromise]) as Awaited<ReturnType<typeof profileService.getProfile>>;
-              
-              if (result.success && result.data?.profile) {
-                updateState({ profile: result.data.profile });
-              } else {
-                // Profile might not exist yet, attempt to create it
-                if (session.user.email) {
-                  const createPromise = profileService.createProfile(session.user.id, session.user.email, {
-                    full_name: session.user.user_metadata?.full_name || null,
-                  });
-                  const createResult = await Promise.race([createPromise, timeoutPromise]) as Awaited<ReturnType<typeof profileService.createProfile>>;
-                  
-                  if (createResult.success && createResult.data?.profile) {
-                    updateState({ profile: createResult.data.profile });
-                  }
-                }
-              }
-            } catch (profileError) {
-              console.warn('Profile loading failed during init:', profileError);
-              // Continue without profile to prevent infinite loading
-              updateState({ profile: null });
-            }
-          } else if (mounted) {
-            setLoading(false);
-          }
-        };
-
-        await Promise.race([initPromise(), timeoutPromise]);
+        if (session?.user && mounted) {
+          console.log('🔧 Initial session found, setting auth data');
+          setAuthData(session.user, session, null);
+        } else if (mounted) {
+          console.log('🔧 No initial session found');
+          setLoading(false);
+        }
 
       } catch (error) {
         console.error('Auth initialization error:', error);
         if (mounted) {
-          // If it's a timeout or any error, continue without profile
-          setLoading(false);
-          if (error instanceof Error && error.message.includes('timeout')) {
-            console.warn('Auth initialization timed out, continuing without profile');
-          } else {
-            setError('Failed to initialize authentication');
-          }
+          setError('Failed to initialize authentication');
         }
       }
     };
 
     initializeAuth();
 
-    // Failsafe: Force loading to stop after 12 seconds no matter what
+    // Shorter failsafe timeout since we're not doing complex profile loading
     const failsafeTimeout = setTimeout(() => {
       if (mounted) {
-        console.warn('Failsafe: Force stopping loading after 12 seconds');
+        console.warn('Failsafe: Force stopping loading after 5 seconds');
         setLoading(false);
       }
-    }, 12000);
+    }, 5000);
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -494,12 +451,17 @@ export const useAuth = (): UseAuthReturn => {
   // RETURN HOOK INTERFACE
   // ==========================================================================
 
-  // Minimal debug logging (only when there are issues)
-  if (!state.user && !state.loading && state.session) {
-    console.warn('🔐 Auth Issue: Has session but no user object', {
-      hasSession: !!state.session,
-      sessionUserId: state.session?.user?.id,
-      stateUser: state.user
+  // Debug the final return values
+  const finalUser = state.user;
+  const finalLoading = state.loading || state.signingIn || state.signingUp;
+  
+  // Log when user state doesn't match session
+  if (state.session?.user && !finalUser && !finalLoading) {
+    console.error('🔐 Auth Bug: Session has user but state.user is null', {
+      sessionUser: state.session.user.id,
+      stateUser: finalUser,
+      loading: finalLoading,
+      isAuthenticated: state.isAuthenticated
     });
   }
 
