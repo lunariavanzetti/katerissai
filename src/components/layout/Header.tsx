@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { config } from '../../config/env';
+import { ThemeToggle } from '../ui/ThemeToggle';
 
 export const Header: React.FC = () => {
   const location = useLocation();
@@ -18,7 +19,7 @@ export const Header: React.FC = () => {
   const isActivePath = (path: string) => location.pathname === path;
 
   return (
-    <header className="fixed top-0 w-full bg-white border-b-3 border-black z-50 shadow-brutal">
+    <header className="fixed top-0 w-full bg-white dark:bg-gray-900 border-b-3 border-black dark:border-gray-600 z-50 shadow-brutal backdrop-blur-md bg-opacity-90 dark:bg-opacity-90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -31,7 +32,7 @@ export const Header: React.FC = () => {
                 <span className="text-white font-bold text-lg">K</span>
               </div>
             </div>
-            <span className="font-bold text-xl text-black group-hover:text-primary transition-colors">
+            <span className="font-bold text-xl text-black dark:text-white group-hover:text-primary dark:group-hover:text-green-400 transition-colors">
               {config.app.name}
             </span>
           </Link>
@@ -45,10 +46,10 @@ export const Header: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`font-medium transition-colors hover:text-primary ${
+                  className={`font-medium transition-colors hover:text-primary dark:hover:text-green-400 ${
                     isActivePath(item.href) 
-                      ? 'text-primary border-b-2 border-primary' 
-                      : 'text-black'
+                      ? 'text-primary dark:text-green-400 border-b-2 border-primary dark:border-green-400' 
+                      : 'text-black dark:text-gray-200'
                   }`}
                 >
                   {item.name}
@@ -57,11 +58,12 @@ export const Header: React.FC = () => {
             })}
           </nav>
 
-          {/* Auth Buttons */}
+          {/* Theme Toggle & Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
+            <ThemeToggle size="sm" />
             {user ? (
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 dark:text-gray-300">
                   Welcome, {user.user_metadata?.full_name || user.email?.split('@')[0]}
                 </span>
                 <Button

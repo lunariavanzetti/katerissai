@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 
@@ -86,9 +87,10 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Router>
-          <div className="min-h-screen bg-white font-primary">
+        <ThemeProvider>
+          <AuthProvider>
+            <Router>
+            <div className="min-h-screen bg-white dark:bg-gray-900 font-primary transition-colors duration-300">
             <Header />
             <main className="pt-20 min-h-screen">
               <Routes>
@@ -135,9 +137,10 @@ function App() {
               }}
             />
           </div>
-        </Router>
-      </AuthProvider>
-    </QueryClientProvider>
+            </Router>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
