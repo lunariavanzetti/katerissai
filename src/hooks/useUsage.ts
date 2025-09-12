@@ -14,7 +14,7 @@ import { useToast } from '../components/ui/Toast';
 
 export const useUsage = (): UseUsageReturn => {
   const { user } = useAuthContext();
-  const { showToast } = useToast();
+  const showToast = useToast();
   
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(false);

@@ -13,7 +13,7 @@ import { useToast } from '../components/ui/Toast';
 
 export const useBilling = (): UseBillingReturn => {
   const { user } = useAuthContext();
-  const { showToast } = useToast();
+  const showToast = useToast();
   
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);

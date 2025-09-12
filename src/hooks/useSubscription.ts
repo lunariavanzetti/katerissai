@@ -13,7 +13,7 @@ import { useToast } from '../components/ui/Toast';
 
 export const useSubscription = (): UseSubscriptionReturn => {
   const { user } = useAuthContext();
-  const { showToast } = useToast();
+  const showToast = useToast();
   
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(false);
