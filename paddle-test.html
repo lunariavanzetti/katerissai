@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Paddle Test</title>
+</head>
+<body>
+    <h1>Paddle Checkout Test</h1>
+    <button onclick="testPaddle()">Test Paddle Checkout</button>
+    <div id="output"></div>
+
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += '<div>' + message + '</div>';
+        }
+
+        function testPaddle() {
+            log('🚀 Testing Paddle...');
+            
+            try {
+                // Initialize Paddle (try different approaches)
+                try {
+                    // Method 1: Just token
+                    Paddle.Setup({
+                        token: 'ntfset_01k4xn3cbh05djjrrw26mgecw3'
+                    });
+                } catch (e1) {
+                    try {
+                        // Method 2: Different parameter name
+                        Paddle.Setup({
+                            token: 'ntfset_01k4xn3cbh05djjrrw26mgecw3',
+                            sandbox: true
+                        });
+                    } catch (e2) {
+                        // Method 3: Initialize method
+                        Paddle.Initialize({
+                            token: 'ntfset_01k4xn3cbh05djjrrw26mgecw3'
+                        });
+                    }
+                }
+                log('✅ Paddle initialized');
+
+                // Test checkout
+                Paddle.Checkout.open({
+                    items: [{
+                        priceId: 'pri_01k4xqh9w5gtcmemvgp99gtra1',
+                        quantity: 1
+                    }],
+                    customer: {
+                        email: 'test@example.com'
+                    }
+                });
+                log('✅ Checkout opened');
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
