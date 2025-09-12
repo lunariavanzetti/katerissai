@@ -117,10 +117,16 @@ export function useVideoGeneration(config: UseVideoGenerationConfig = {}): UseVi
         return null;
       }
       
+      // Check subscription before making API call
+      if (!hasActiveSubscription && !canGenerateVideo) {
+        console.warn('⚠️ Skipping status check - no active subscription');
+        return null;
+      }
+      
       const response = await veoAPI.checkGenerationStatus(generationState.currentVideo.veoJobId);
       return response.success ? response.data : null;
     },
-    enabled: !!user?.id && !!generationState.currentVideo?.veoJobId && generationState.isGenerating,
+    enabled: !!user?.id && !!generationState.currentVideo?.veoJobId && generationState.isGenerating && (hasActiveSubscription || canGenerateVideo),
     refetchInterval: enableRealTimeUpdates ? pollingInterval : false,
     refetchIntervalInBackground: false,
   });

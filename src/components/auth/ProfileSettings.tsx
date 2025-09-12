@@ -94,9 +94,9 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const onProfileSubmit = async (data: ProfileFormData) => {
     try {
       const updateData: ProfileUpdateData = {
-        full_name: data.fullName.trim() || null,
-        bio: data.bio.trim() || null,
-        website: data.website.trim() || null,
+        full_name: (data.fullName || '').trim() || null,
+        bio: (data.bio || '').trim() || null,
+        website: (data.website || '').trim() || null,
       };
 
       const result = await actions.updateProfile(updateData);
