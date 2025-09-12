@@ -68,6 +68,14 @@ export const useAuth = (): UseAuthReturn => {
     const isAuthenticated = !!user && !!session;
     const isEmailConfirmed = user?.email_confirmed_at ? true : false;
 
+    console.log('🔧 setAuthData called:', {
+      hasUser: !!user,
+      userId: user?.id,
+      email: user?.email,
+      isAuthenticated,
+      hasSession: !!session
+    });
+
     updateState({
       user,
       session,
@@ -414,9 +422,8 @@ export const useAuth = (): UseAuthReturn => {
         switch (event) {
           case 'SIGNED_IN':
             if (session?.user) {
+              console.log('Auth state change: SIGNED_IN, setting auth data for user:', session.user.email);
               setAuthData(session.user, session);
-              // Profile loading is handled by the initialization above
-              console.log('User signed in, profile will be loaded by initialization');
             }
             break;
 
@@ -487,15 +494,14 @@ export const useAuth = (): UseAuthReturn => {
   // RETURN HOOK INTERFACE
   // ==========================================================================
 
-  // Debug logging to identify auth state issues
-  console.log('🔐 Auth Hook State:', {
-    hasUser: !!state.user,
-    userId: state.user?.id,
-    email: state.user?.email,
-    isAuthenticated: state.isAuthenticated,
-    loading: state.loading || state.signingIn || state.signingUp,
-    hasSession: !!state.session
-  });
+  // Minimal debug logging (only when there are issues)
+  if (!state.user && !state.loading && state.session) {
+    console.warn('🔐 Auth Issue: Has session but no user object', {
+      hasSession: !!state.session,
+      sessionUserId: state.session?.user?.id,
+      stateUser: state.user
+    });
+  }
 
   return {
     // State
