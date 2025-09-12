@@ -21,7 +21,8 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   onUpgrade,
   onError
 }) => {
-  const { initiateCheckout, validatePayment, formatPrice } = usePayment();
+  const { actions, validatePayment, formatPrice } = usePayment();
+  const { initiateCheckout } = actions;
   const { subscription, updateSubscription } = useSubscription();
   
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(
