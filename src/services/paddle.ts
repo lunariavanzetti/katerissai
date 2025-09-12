@@ -80,19 +80,16 @@ class PaddleService {
 
       // Setup Paddle with configuration
       if (window.Paddle && this.clientSideToken) {
-        // Try different Paddle setup approaches based on version
-        try {
-          // Paddle v2 approach
-          window.Paddle.Initialize({
-            token: this.clientSideToken,
-            environment: this.environment
-          });
-        } catch (err) {
-          // Fallback to older setup method
-          window.Paddle.Setup({
-            token: this.clientSideToken
-          });
-        }
+        console.log('🔧 Initializing Paddle with:', {
+          token: this.clientSideToken.substring(0, 10) + '...',
+          environment: this.environment
+        });
+
+        // Use the most compatible setup method
+        window.Paddle.Setup({
+          token: this.clientSideToken,
+          environment: this.environment
+        });
 
         this.initialized = true;
         console.log('✅ Paddle initialized successfully');
@@ -173,7 +170,18 @@ class PaddleService {
       window.addEventListener('paddle_checkout_success', handleSuccess);
       window.addEventListener('paddle_checkout_close', handleClose);
 
-      window.Paddle.Checkout.open(checkoutOptions);
+      console.log('🔧 Opening Paddle checkout with options:', {
+        ...checkoutOptions,
+        priceId: checkoutOptions.items?.[0]?.priceId || 'direct-price'
+      });
+
+      try {
+        window.Paddle.Checkout.open(checkoutOptions);
+      } catch (error) {
+        console.error('❌ Paddle checkout failed:', error);
+        cleanup();
+        reject(error);
+      }
     });
   }
 
@@ -226,7 +234,18 @@ class PaddleService {
       window.addEventListener('paddle_checkout_success', handleSuccess);
       window.addEventListener('paddle_checkout_close', handleClose);
 
-      window.Paddle.Checkout.open(checkoutOptions);
+      console.log('🔧 Opening Paddle checkout with options:', {
+        ...checkoutOptions,
+        priceId: checkoutOptions.items?.[0]?.priceId || 'direct-price'
+      });
+
+      try {
+        window.Paddle.Checkout.open(checkoutOptions);
+      } catch (error) {
+        console.error('❌ Paddle checkout failed:', error);
+        cleanup();
+        reject(error);
+      }
     });
   }
 
