@@ -80,11 +80,19 @@ class PaddleService {
 
       // Setup Paddle with configuration
       if (window.Paddle && this.clientSideToken) {
-        window.Paddle.Setup({
-          vendor: parseInt(this.vendorId),
-          token: this.clientSideToken,
-          ...(this.environment === 'sandbox' && { sandbox: true })
-        });
+        // Try different Paddle setup approaches based on version
+        try {
+          // Paddle v2 approach
+          window.Paddle.Initialize({
+            token: this.clientSideToken,
+            environment: this.environment
+          });
+        } catch (err) {
+          // Fallback to older setup method
+          window.Paddle.Setup({
+            token: this.clientSideToken
+          });
+        }
 
         this.initialized = true;
         console.log('✅ Paddle initialized successfully');
