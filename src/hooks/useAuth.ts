@@ -326,8 +326,12 @@ export const useAuth = (): UseAuthReturn => {
 
     // Simple initialization - just get the session and set up the listener
     const initializeAuth = async () => {
-      if (initialized.current) return;
+      if (initialized.current) {
+        console.log('🔧 Auth already initialized, skipping');
+        return;
+      }
       initialized.current = true;
+      console.log('🚀 Starting auth initialization...');
 
       try {
         setLoading(true);
@@ -346,6 +350,8 @@ export const useAuth = (): UseAuthReturn => {
         if (session?.user && mounted) {
           console.log('🔧 Initial session found, setting auth data');
           setAuthData(session.user, session, null);
+          // Clear the failsafe timeout since we found a session
+          clearTimeout(failsafeTimeout);
         } else if (mounted) {
           console.log('🔧 No initial session found');
           setLoading(false);
@@ -363,9 +369,11 @@ export const useAuth = (): UseAuthReturn => {
 
     // Shorter failsafe timeout since we're not doing complex profile loading
     const failsafeTimeout = setTimeout(() => {
-      if (mounted) {
+      if (mounted && state.loading) {
         console.warn('Failsafe: Force stopping loading after 5 seconds');
-        setLoading(false);
+        console.warn('Current auth state:', { user: !!state.user, loading: state.loading, isAuthenticated: state.isAuthenticated });
+        // Force stop loading regardless of current state
+        updateState({ loading: false });
       }
     }, 5000);
 
@@ -380,7 +388,14 @@ export const useAuth = (): UseAuthReturn => {
           case 'SIGNED_IN':
             if (session?.user) {
               console.log('Auth state change: SIGNED_IN, setting auth data for user:', session.user.email);
-              setAuthData(session.user, session);
+              // Only update if the user has changed or we don't have a user yet
+              if (!state.user || state.user.id !== session.user.id) {
+                setAuthData(session.user, session);
+              } else {
+                console.log('🔧 User already authenticated, skipping re-initialization');
+                // Just ensure loading is false
+                updateState({ loading: false });
+              }
             }
             break;
 
