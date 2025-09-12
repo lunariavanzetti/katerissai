@@ -73,10 +73,8 @@ export const useSubscription = (): UseSubscriptionReturn => {
       const newSubscription = await subscriptionService.createSubscription(subscriptionData);
       setSubscription(newSubscription);
       
-      showToast({
-        type: 'success',
-        title: 'Subscription Created!',
-        message: `Successfully subscribed to ${planId} plan`
+      showToast.success(`Successfully subscribed to ${planId} plan`, {
+        title: 'Subscription Created!'
       });
 
       return newSubscription;
@@ -84,10 +82,8 @@ export const useSubscription = (): UseSubscriptionReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create subscription';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Subscription Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Subscription Failed'
       });
       
       throw err;
@@ -116,10 +112,8 @@ export const useSubscription = (): UseSubscriptionReturn => {
 
       setSubscription(updatedSubscription);
       
-      showToast({
-        type: 'success',
-        title: 'Plan Updated!',
-        message: `Successfully changed to ${planId} plan`
+      showToast.success(`Successfully changed to ${planId} plan`, {
+        title: 'Plan Updated!'
       });
 
       return updatedSubscription;
@@ -127,10 +121,8 @@ export const useSubscription = (): UseSubscriptionReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update subscription';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Update Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Update Failed'
       });
       
       throw err;
@@ -162,19 +154,15 @@ export const useSubscription = (): UseSubscriptionReturn => {
         ? 'Subscription canceled immediately'
         : 'Subscription will cancel at the end of your current billing period';
       
-      showToast({
-        type: 'success',
-        title: 'Subscription Canceled',
-        message
+      showToast.success(message, {
+        title: 'Subscription Canceled'
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to cancel subscription';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Cancellation Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Cancellation Failed'
       });
       
       throw err;
@@ -201,10 +189,8 @@ export const useSubscription = (): UseSubscriptionReturn => {
 
       setSubscription(reactivatedSubscription);
       
-      showToast({
-        type: 'success',
-        title: 'Subscription Reactivated!',
-        message: 'Your subscription has been successfully reactivated'
+      showToast.success('Your subscription has been successfully reactivated', {
+        title: 'Subscription Reactivated!'
       });
 
       return reactivatedSubscription;
@@ -212,10 +198,8 @@ export const useSubscription = (): UseSubscriptionReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to reactivate subscription';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Reactivation Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Reactivation Failed'
       });
       
       throw err;

@@ -73,17 +73,13 @@ export const useUsage = (): UseUsageReturn => {
         const updatedUsage = await usageService.getCurrentUsage(user.id);
         
         if (updatedUsage.videoLimit && updatedUsage.videosGenerated >= updatedUsage.videoLimit) {
-          showToast({
-            type: 'warning',
-            title: 'Limit Reached',
-            message: `You've used all ${updatedUsage.videoLimit} videos in your plan`
+          showToast.warning(`You've used all ${updatedUsage.videoLimit} videos in your plan`, {
+            title: 'Limit Reached'
           });
         } else if (updatedUsage.videoLimit && updatedUsage.usagePercentage >= 80) {
           const remaining = updatedUsage.remainingVideos || 0;
-          showToast({
-            type: 'warning',
-            title: 'Usage Alert',
-            message: `You have ${remaining} videos remaining this month`
+          showToast.warning(`You have ${remaining} videos remaining this month`, {
+            title: 'Usage Alert'
           });
         }
       }
@@ -91,10 +87,8 @@ export const useUsage = (): UseUsageReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to record usage';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Usage Tracking Error',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Usage Tracking Error'
       });
       
       throw err;
@@ -137,10 +131,8 @@ export const useUsage = (): UseUsageReturn => {
       const result = await usageService.canGenerateVideo(user.id);
       
       if (!result.canGenerate && result.reason) {
-        showToast({
-          type: 'error',
-          title: 'Generation Limit Reached',
-          message: result.reason
+        showToast.error(result.reason, {
+          title: 'Generation Limit Reached'
         });
       }
 
@@ -301,10 +293,8 @@ export const useUsage = (): UseUsageReturn => {
     if (usage.usagePercentage >= 80 && usage.usagePercentage < 90) {
       const remaining = usage.remainingVideos || 0;
       if (remaining > 0) {
-        showToast({
-          type: 'warning',
+        showToast.warning(`You have ${remaining} videos remaining this month`, {
           title: 'Usage Alert',
-          message: `You have ${remaining} videos remaining this month`,
           duration: 5000
         });
       }
@@ -314,10 +304,8 @@ export const useUsage = (): UseUsageReturn => {
     if (usage.usagePercentage >= 95 && usage.usagePercentage < 100) {
       const remaining = usage.remainingVideos || 0;
       if (remaining > 0) {
-        showToast({
-          type: 'warning',
+        showToast.warning(`Only ${remaining} videos left in your plan`, {
           title: 'Final Warning',
-          message: `Only ${remaining} videos left in your plan`,
           duration: 8000
         });
       }

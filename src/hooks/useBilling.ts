@@ -86,10 +86,8 @@ export const useBilling = (): UseBillingReturn => {
 
       const downloadUrl = await billingService.generateInvoiceDownloadUrl(invoiceId);
       
-      showToast({
-        type: 'success',
-        title: 'Invoice Ready',
-        message: 'Invoice download started'
+      showToast.success('Invoice download started', {
+        title: 'Invoice Ready'
       });
 
       return downloadUrl;
@@ -97,10 +95,8 @@ export const useBilling = (): UseBillingReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to download invoice';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Download Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Download Failed'
       });
       
       throw err;
@@ -134,10 +130,8 @@ export const useBilling = (): UseBillingReturn => {
       // Reload payment methods
       await loadPaymentMethods();
       
-      showToast({
-        type: 'success',
-        title: 'Payment Method Added',
-        message: 'Payment method successfully added to your account'
+      showToast.success('Payment method successfully added to your account', {
+        title: 'Payment Method Added'
       });
 
       return newPaymentMethod;
@@ -145,10 +139,8 @@ export const useBilling = (): UseBillingReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add payment method';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Failed to Add Payment Method',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Failed to Add Payment Method'
       });
       
       throw err;
@@ -174,19 +166,15 @@ export const useBilling = (): UseBillingReturn => {
       // Reload payment methods
       await loadPaymentMethods();
       
-      showToast({
-        type: 'success',
-        title: 'Payment Method Removed',
-        message: 'Payment method successfully removed from your account'
+      showToast.success('Payment method successfully removed from your account', {
+        title: 'Payment Method Removed'
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to remove payment method';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Failed to Remove Payment Method',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Failed to Remove Payment Method'
       });
       
       throw err;
@@ -212,19 +200,15 @@ export const useBilling = (): UseBillingReturn => {
       // Reload payment methods
       await loadPaymentMethods();
       
-      showToast({
-        type: 'success',
-        title: 'Default Payment Method Updated',
-        message: 'Your default payment method has been updated'
+      showToast.success('Your default payment method has been updated', {
+        title: 'Default Payment Method Updated'
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to set default payment method';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Failed to Update Default Payment Method',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Failed to Update Default Payment Method'
       });
       
       throw err;
@@ -246,19 +230,15 @@ export const useBilling = (): UseBillingReturn => {
       // Reload invoices to reflect updated status
       await loadInvoices();
       
-      showToast({
-        type: 'success',
-        title: 'Payment Retry Initiated',
-        message: 'We will attempt to process your payment again'
+      showToast.success('We will attempt to process your payment again', {
+        title: 'Payment Retry Initiated'
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to retry payment';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Payment Retry Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Payment Retry Failed'
       });
       
       throw err;
@@ -296,10 +276,8 @@ export const useBilling = (): UseBillingReturn => {
       setLoading(true);
       const csvData = await billingService.exportInvoicesToCsv(user.id, startDate, endDate);
       
-      showToast({
-        type: 'success',
-        title: 'Export Ready',
-        message: 'Invoices exported successfully'
+      showToast.success('Invoices exported successfully', {
+        title: 'Export Ready'
       });
 
       return csvData;
@@ -307,10 +285,8 @@ export const useBilling = (): UseBillingReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to export invoices';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Export Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Export Failed'
       });
       
       throw err;

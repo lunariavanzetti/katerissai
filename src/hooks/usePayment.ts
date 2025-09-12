@@ -37,20 +37,16 @@ export const usePayment = (): UsePaymentReturn => {
       setError(null);
 
       // Show loading toast
-      showToast({
-        type: 'info',
-        title: 'Opening Checkout',
-        message: 'Redirecting to secure payment...'
+      showToast.info('Redirecting to secure payment...', {
+        title: 'Opening Checkout'
       });
 
       const checkoutOptions = {
         ...options,
         successCallback: (data: PaddleCheckoutSuccess) => {
           setLoading(false);
-          showToast({
-            type: 'success',
-            title: 'Payment Successful!',
-            message: `Successfully purchased ${plan.name}`
+          showToast.success(`Successfully purchased ${plan.name}`, {
+            title: 'Payment Successful!'
           });
           
           // Call original success callback if provided
@@ -58,10 +54,8 @@ export const usePayment = (): UsePaymentReturn => {
         },
         closeCallback: () => {
           setLoading(false);
-          showToast({
-            type: 'info',
-            title: 'Checkout Closed',
-            message: 'Payment process was cancelled'
+          showToast.info('Payment process was cancelled', {
+            title: 'Checkout Closed'
           });
           
           // Call original close callback if provided
@@ -107,10 +101,8 @@ export const usePayment = (): UsePaymentReturn => {
       setError(errorMessage);
       setLoading(false);
       
-      showToast({
-        type: 'error',
-        title: 'Checkout Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Checkout Failed'
       });
       
       throw err;
@@ -159,10 +151,8 @@ export const usePayment = (): UsePaymentReturn => {
         paidAt: new Date()
       };
 
-      showToast({
-        type: 'success',
-        title: 'Payment Successful!',
-        message: `Paid ${paddleService.formatPrice(amount)} for ${description}`
+      showToast.success(`Paid ${paddleService.formatPrice(amount)} for ${description}`, {
+        title: 'Payment Successful!'
       });
 
       return payment;
@@ -170,10 +160,8 @@ export const usePayment = (): UsePaymentReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to process payment';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Payment Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Payment Failed'
       });
       
       throw err;
@@ -219,10 +207,8 @@ export const usePayment = (): UsePaymentReturn => {
       };
 
       const refundAmount = amount || paymentData.amount;
-      showToast({
-        type: 'success',
-        title: 'Refund Processed',
-        message: `Refunded ${paddleService.formatPrice(refundAmount)}`
+      showToast.success(`Refunded ${paddleService.formatPrice(refundAmount)}`, {
+        title: 'Refund Processed'
       });
 
       return refundedPayment;
@@ -230,10 +216,8 @@ export const usePayment = (): UsePaymentReturn => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to process refund';
       setError(errorMessage);
       
-      showToast({
-        type: 'error',
-        title: 'Refund Failed',
-        message: errorMessage
+      showToast.error(errorMessage, {
+        title: 'Refund Failed'
       });
       
       throw err;
@@ -311,10 +295,8 @@ export const usePayment = (): UsePaymentReturn => {
     setLoading(false);
     setError(null);
     
-    showToast({
-      type: 'info',
-      title: 'Checkout Cancelled',
-      message: 'Payment process was cancelled'
+    showToast.info('Payment process was cancelled', {
+      title: 'Checkout Cancelled'
     });
   }, [showToast]);
 
