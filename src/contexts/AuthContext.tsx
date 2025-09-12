@@ -335,5 +335,5 @@ export class AuthErrorBoundary extends React.Component<
 // EXPORTS
 // =============================================================================
 
-export { AuthContext };
+export { AuthContext, useAuthStatus, useAuthUser, useAuthActions };
 export type { AuthProviderProps, WithAuthProps };

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthContext} from '../contexts/AuthContext';
+import { useAuthContext, useAuthStatus } from '../../contexts/AuthContext';
 import { Loading, Card, Button } from '../ui';
 import type { AuthGuardProps } from '../../types/auth';
 

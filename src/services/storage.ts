@@ -60,7 +60,8 @@ class StorageService {
 
   constructor(config: Partial<StorageConfig> = {}) {
     this.config = { ...STORAGE_CONFIG, ...config };
-    this.initializeBucket();
+    // Don't initialize bucket during construction to avoid errors during app startup
+    // Initialize lazily when first method is called
   }
 
   private async initializeBucket(): Promise<void> {

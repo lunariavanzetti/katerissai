@@ -96,7 +96,7 @@ export const useAuth = (): UseAuthReturn => {
     try {
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Profile loading timeout')), 10000);
+        setTimeout(() => reject(new Error('Profile loading timeout')), 5000);
       });
 
       const profilePromise = profileService.getProfile(userId);
@@ -320,7 +320,7 @@ export const useAuth = (): UseAuthReturn => {
         
         // Add overall timeout for initialization
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 15000);
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 8000);
         });
 
         const initPromise = async () => {
