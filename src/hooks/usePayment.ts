@@ -10,7 +10,7 @@ import {
   PaddleCheckoutSuccess
 } from '../types/payment';
 import { paddleService } from '../services/paddle';
-import { useAuthContext} from '../contexts/AuthContext';
+import { useAuthContext } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { config } from '../config/env';
 

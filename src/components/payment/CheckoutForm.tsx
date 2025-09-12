@@ -10,7 +10,7 @@ import {
   PaddleCheckoutSuccess
 } from '../../types/payment';
 import { usePayment } from '../../hooks/usePayment';
-import { useAuthContext} from '../contexts/AuthContext';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 interface CheckoutFormState {
   step: 'plan' | 'payment' | 'processing' | 'success' | 'error';
