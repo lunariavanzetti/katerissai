@@ -475,6 +475,7 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
     price: 2.49,
     currency: 'USD',
     interval: 'one-time',
+    paddleProductId: 'pri_01k4xqh9w5gtcmemvgp99gtra1',
     features: [
       '1 video generation',
       'HD quality (1080p)',
@@ -495,6 +496,7 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
     price: 29,
     currency: 'USD',
     interval: 'month',
+    paddleProductId: 'pri_01k4xqnga1106gkfk9nsjs82wv',
     features: [
       '20 videos per month',
       'HD quality (1080p)',
@@ -516,6 +518,7 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
     price: 149,
     currency: 'USD',
     interval: 'month',
+    paddleProductId: 'pri_01k4xqy5hwk8qfnt9f636mgtgv',
     features: [
       'Unlimited videos',
       '4K quality available',

@@ -13,6 +13,11 @@ export const config = {
     vendorId: import.meta.env.VITE_PADDLE_VENDOR_ID || '',
     clientSideToken: import.meta.env.VITE_PADDLE_CLIENT_SIDE_TOKEN || '',
     environment: (import.meta.env.VITE_PADDLE_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production',
+    priceIds: {
+      payPerVideo: import.meta.env.VITE_PADDLE_PAY_PER_VIDEO_PRICE_ID || '',
+      basicMonthly: import.meta.env.VITE_PADDLE_BASIC_MONTHLY_PRICE_ID || '',
+      premiumMonthly: import.meta.env.VITE_PADDLE_PREMIUM_MONTHLY_PRICE_ID || '',
+    },
   },
   gemini: {
     apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',

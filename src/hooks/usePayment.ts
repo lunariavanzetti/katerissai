@@ -12,6 +12,7 @@ import {
 import { paddleService } from '../services/paddle';
 import { useAuthContext} from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
+import { config } from '../config/env';
 
 export const usePayment = (): UsePaymentReturn => {
   const { user } = useAuthContext();
@@ -71,7 +72,7 @@ export const usePayment = (): UsePaymentReturn => {
       if (plan.interval === 'one-time') {
         // One-time payment (pay-per-video)
         await paddleService.openCheckout({
-          price: plan.price,
+          priceId: plan.paddleProductId,
           title: plan.name,
           quantity: 1,
           customerEmail: user.email,
@@ -90,7 +91,7 @@ export const usePayment = (): UsePaymentReturn => {
         }
 
         await paddleService.openSubscriptionCheckout({
-          planId: plan.paddleProductId,
+          priceId: plan.paddleProductId,
           customerEmail: user.email,
           customerName: user.user_metadata?.full_name || user.email,
           customData: {
@@ -132,7 +133,7 @@ export const usePayment = (): UsePaymentReturn => {
       setError(null);
 
       const checkoutData = await paddleService.openCheckout({
-        price: amount,
+        priceId: config.paddle.priceIds.payPerVideo,
         title: description,
         quantity: 1,
         customerEmail: user.email,

@@ -1,32 +1,42 @@
-// Paddle Integration Service for Kateriss AI Video Generator
-// Comprehensive Paddle SDK integration with webhook handling
+// Paddle Integration Service for Kateriss AI Video Generator  
+// Modern Paddle.js v2 integration with checkout handling
 
+import { config } from '../config/env';
 import { 
   PaddleEnvironment,
   PaddleCheckoutSettings,
   PaddleCheckoutSuccess,
-  PaddleProduct,
-  PaddleWebhookEvent,
-  WebhookEventType,
+  PricingPlan,
   PaddleApiResponse,
-  SubscriptionApiResponse
+  SubscriptionApiResponse,
+  PaddleWebhookEvent,
+  WebhookEventType
 } from '../types/payment';
 
-// Paddle SDK types (from @paddle/paddle-js)
+// Paddle.js v2 SDK types
 interface PaddleSDK {
-  Environment: {
-    set: (environment: 'sandbox' | 'production') => void;
-  };
   Setup: {
-    vendor: (vendorId: number) => void;
+    (options: {
+      environment: 'sandbox' | 'production';
+      vendor?: number;
+      token?: string;
+    }): void;
   };
   Checkout: {
-    open: (options: any) => void;
-    close: () => void;
+    open: (options: {
+      items: Array<{
+        priceId: string;
+        quantity?: number;
+      }>;
+      customer?: {
+        email?: string;
+      };
+      customData?: Record<string, any>;
+      successUrl?: string;
+    }) => void;
   };
-  Spinner: {
-    show: () => void;
-    hide: () => void;
+  Environment: {
+    set: (env: 'sandbox' | 'production') => void;
   };
 }
 
@@ -37,19 +47,20 @@ declare global {
 }
 
 class PaddleService {
-  private vendorId: string;
-  private clientSideToken: string;
   private environment: 'sandbox' | 'production';
   private initialized: boolean = false;
-  private paddleScript: HTMLScriptElement | null = null;
+  private vendorId: string;
+  private clientSideToken: string;
 
   constructor() {
-    this.vendorId = import.meta.env.VITE_PADDLE_VENDOR_ID || '';
-    this.clientSideToken = import.meta.env.VITE_PADDLE_CLIENT_SIDE_TOKEN || '';
-    this.environment = (import.meta.env.VITE_PADDLE_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox';
-
+    this.environment = config.paddle.environment as 'sandbox' | 'production';
+    this.vendorId = config.paddle.vendorId || '';
+    this.clientSideToken = config.paddle.clientSideToken || '';
+    
     if (!this.vendorId || !this.clientSideToken) {
       console.warn('Paddle configuration missing. Please set VITE_PADDLE_VENDOR_ID and VITE_PADDLE_CLIENT_SIDE_TOKEN');
+    } else {
+      console.log('🏄‍♂️ Paddle configured for', this.environment, 'environment');
     }
   }
 
@@ -62,17 +73,29 @@ class PaddleService {
     }
 
     try {
-      await this.loadPaddleScript();
-      this.configurePaddle();
-      this.initialized = true;
+      // Load Paddle.js if not already loaded
+      if (!window.Paddle) {
+        await this.loadPaddleScript();
+      }
+
+      // Setup Paddle with configuration
+      if (window.Paddle && this.clientSideToken) {
+        window.Paddle.Setup({
+          environment: this.environment,
+          token: this.clientSideToken
+        });
+
+        this.initialized = true;
+        console.log('✅ Paddle initialized successfully');
+      }
     } catch (error) {
-      console.error('Failed to initialize Paddle:', error);
-      throw new Error('Paddle SDK initialization failed');
+      console.error('❌ Failed to initialize Paddle:', error);
+      throw error;
     }
   }
 
   /**
-   * Load Paddle script dynamically
+   * Load Paddle.js script dynamically
    */
   private loadPaddleScript(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -81,32 +104,20 @@ class PaddleService {
         return;
       }
 
-      this.paddleScript = document.createElement('script');
-      this.paddleScript.src = 'https://cdn.paddle.com/paddle/paddle.js';
-      this.paddleScript.onload = () => resolve();
-      this.paddleScript.onerror = () => reject(new Error('Failed to load Paddle script'));
+      const script = document.createElement('script');
+      script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load Paddle script'));
       
-      document.head.appendChild(this.paddleScript);
+      document.head.appendChild(script);
     });
-  }
-
-  /**
-   * Configure Paddle with environment and vendor settings
-   */
-  private configurePaddle(): void {
-    if (!window.Paddle) {
-      throw new Error('Paddle SDK not available');
-    }
-
-    window.Paddle.Environment.set(this.environment);
-    window.Paddle.Setup.vendor(parseInt(this.vendorId));
   }
 
   /**
    * Open Paddle Checkout for one-time payments
    */
   async openCheckout(options: {
-    product?: string;
+    priceId?: string;
     price?: number;
     title?: string;
     quantity?: number;
@@ -123,25 +134,35 @@ class PaddleService {
 
     return new Promise((resolve, reject) => {
       const checkoutOptions = {
-        product: options.product,
-        price: options.price,
-        title: options.title || 'Kateriss AI Video Generation',
-        quantity: options.quantity || 1,
-        customer_email: options.customerEmail,
-        customer_name: options.customerName,
-        passthrough: JSON.stringify(options.customData || {}),
-        
-        // Callback functions
-        successCallback: (data: PaddleCheckoutSuccess) => {
-          resolve(data);
-        },
-        closeCallback: () => {
-          reject(new Error('Checkout cancelled by user'));
-        },
-        
-        // Additional settings
-        ...options.settings
+        items: [{
+          priceId: options.priceId || config.paddle.priceIds.payPerVideo,
+          quantity: options.quantity || 1
+        }],
+        customer: options.customerEmail ? {
+          email: options.customerEmail
+        } : undefined,
+        customData: options.customData,
+        successUrl: `${window.location.origin}/dashboard?payment=success`
       };
+
+      // Set up event listeners for v2 API
+      const handleSuccess = (event: any) => {
+        resolve(event.data);
+        cleanup();
+      };
+
+      const handleClose = () => {
+        reject(new Error('Checkout cancelled by user'));
+        cleanup();
+      };
+
+      const cleanup = () => {
+        window.removeEventListener('paddle_checkout_success', handleSuccess);
+        window.removeEventListener('paddle_checkout_close', handleClose);
+      };
+
+      window.addEventListener('paddle_checkout_success', handleSuccess);
+      window.addEventListener('paddle_checkout_close', handleClose);
 
       window.Paddle.Checkout.open(checkoutOptions);
     });
@@ -151,7 +172,7 @@ class PaddleService {
    * Open Paddle Checkout for subscription
    */
   async openSubscriptionCheckout(options: {
-    planId: string;
+    priceId: string;
     customerEmail?: string;
     customerName?: string;
     trialDays?: number;
@@ -166,23 +187,35 @@ class PaddleService {
 
     return new Promise((resolve, reject) => {
       const checkoutOptions = {
-        product: options.planId,
-        customer_email: options.customerEmail,
-        customer_name: options.customerName,
-        trial_days: options.trialDays,
-        passthrough: JSON.stringify(options.customData || {}),
-        
-        // Callback functions
-        successCallback: (data: PaddleCheckoutSuccess) => {
-          resolve(data);
-        },
-        closeCallback: () => {
-          reject(new Error('Subscription checkout cancelled by user'));
-        },
-        
-        // Additional settings
-        ...options.settings
+        items: [{
+          priceId: options.priceId,
+          quantity: 1
+        }],
+        customer: options.customerEmail ? {
+          email: options.customerEmail
+        } : undefined,
+        customData: options.customData,
+        successUrl: `${window.location.origin}/dashboard?payment=success`
       };
+
+      // Set up event listeners for v2 API
+      const handleSuccess = (event: any) => {
+        resolve(event.data);
+        cleanup();
+      };
+
+      const handleClose = () => {
+        reject(new Error('Subscription checkout cancelled by user'));
+        cleanup();
+      };
+
+      const cleanup = () => {
+        window.removeEventListener('paddle_checkout_success', handleSuccess);
+        window.removeEventListener('paddle_checkout_close', handleClose);
+      };
+
+      window.addEventListener('paddle_checkout_success', handleSuccess);
+      window.addEventListener('paddle_checkout_close', handleClose);
 
       window.Paddle.Checkout.open(checkoutOptions);
     });
@@ -382,15 +415,15 @@ class PaddleService {
    * Generate Paddle checkout URL for pay-per-video
    */
   generatePayPerVideoUrl(videoCount: number = 1, customerEmail?: string): string {
-    const baseUrl = this.environment === 'sandbox' 
-      ? 'https://sandbox-checkout.paddle.com/checkout'
-      : 'https://checkout.paddle.com/checkout';
+    const baseUrl = this.environment === 'sandbox' || this.environment === 'production'
+      ? 'https://buy.paddle.com/checkout'
+      : 'https://buy.paddle.com/checkout';
     
     const params = new URLSearchParams({
-      vendor: this.vendorId,
-      product: 'pay-per-video',
-      quantity: videoCount.toString(),
-      price: (2.49 * videoCount).toString()
+      items: JSON.stringify([{
+        priceId: config.paddle.priceIds.payPerVideo,
+        quantity: videoCount
+      }])
     });
 
     if (customerEmail) {
@@ -403,14 +436,14 @@ class PaddleService {
   /**
    * Generate subscription checkout URL
    */
-  generateSubscriptionUrl(planId: string, customerEmail?: string): string {
-    const baseUrl = this.environment === 'sandbox'
-      ? 'https://sandbox-checkout.paddle.com/subscription'
-      : 'https://checkout.paddle.com/subscription';
+  generateSubscriptionUrl(priceId: string, customerEmail?: string): string {
+    const baseUrl = 'https://buy.paddle.com/checkout';
     
     const params = new URLSearchParams({
-      vendor: this.vendorId,
-      product: planId
+      items: JSON.stringify([{
+        priceId: priceId,
+        quantity: 1
+      }])
     });
 
     if (customerEmail) {
