@@ -51,7 +51,12 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   };
 
   const handleConfirmUpgrade = async () => {
-    if (!selectedPlan) return;
+    if (!selectedPlan) {
+      console.error('❌ No plan selected');
+      return;
+    }
+
+    console.log('🚀 Confirming upgrade for plan:', selectedPlan.tier);
 
     try {
       setIsProcessing(true);
@@ -60,8 +65,11 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
       // Validate the payment
       const validation = validatePayment(selectedPlan);
       if (!validation.isValid) {
+        console.error('❌ Payment validation failed:', validation.error);
         throw new Error(validation.error);
       }
+      
+      console.log('✅ Payment validation passed');
 
       if (subscription) {
         // Update existing subscription
@@ -70,19 +78,32 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
         onClose();
       } else {
         // Create new subscription via checkout
+        console.log('💳 Starting checkout for new subscription...');
+        console.log('💳 Plan details:', { 
+          tier: selectedPlan.tier, 
+          price: selectedPlan.price, 
+          paddleProductId: selectedPlan.paddleProductId 
+        });
+        
         await initiateCheckout(selectedPlan, {
           successCallback: (data) => {
+            console.log('✅ Checkout success:', data);
             onUpgrade(selectedPlan);
             onClose();
           },
           closeCallback: () => {
+            console.log('❌ Checkout closed by user');
             setStep('confirm');
             setIsProcessing(false);
           }
         });
+        
+        console.log('💳 Checkout initiated successfully');
       }
     } catch (error) {
+      console.error('❌ Upgrade failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Upgrade failed';
+      console.error('❌ Error message:', errorMessage);
       onError?.(errorMessage);
       setStep('confirm');
     } finally {

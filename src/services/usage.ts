@@ -68,7 +68,7 @@ class UsageService {
    */
   async getCurrentUsage(userId: string): Promise<UsageData> {
     try {
-      const subscription = await subscriptionService.getUserSubscription(userId);
+      const subscription = await subscriptionService.getSubscriptionByUserId(userId);
       const limits = this.getUsageLimits(subscription?.plan || 'pay-per-video');
       
       // Calculate current billing period
@@ -282,7 +282,7 @@ class UsageService {
     }
 
     const videosGenerated = events.reduce((total, event) => total + event.credits_used, 0);
-    const subscription = await subscriptionService.getUserSubscription(userId);
+    const subscription = await subscriptionService.getSubscriptionByUserId(userId);
     const limits = this.getUsageLimits(subscription?.plan || 'pay-per-video');
     const videoLimit = limits.videoLimit;
     const overageCount = videoLimit ? Math.max(0, videosGenerated - videoLimit) : 0;
