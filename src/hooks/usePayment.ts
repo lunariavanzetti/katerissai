@@ -16,7 +16,7 @@ import { config } from '../config/env';
 
 export const usePayment = (): UsePaymentReturn => {
   const { user } = useAuthContext();
-  const { showToast } = useToast();
+  const showToast = useToast();
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
