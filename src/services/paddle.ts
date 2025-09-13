@@ -59,6 +59,25 @@ class PaddleService {
     this.clientSideToken = config.paddle.clientSideToken || '';
     this.apiKey = config.paddle.apiKey || '';
     
+    // Comprehensive configuration logging for debugging
+    console.log('🔍 COMPLETE PADDLE CONFIGURATION:');
+    console.log('📋 All Configuration Details:', {
+      environment: this.environment,
+      vendorId: this.vendorId,
+      clientSideToken: this.clientSideToken,
+      apiKey: this.apiKey,
+      priceIds: config.paddle.priceIds,
+      currentURL: window.location.origin,
+      configSource: 'import.meta.env values'
+    });
+    
+    console.log('🔑 FULL API KEYS (for debugging):');
+    console.log('Vendor ID:', this.vendorId);
+    console.log('Client-Side Token:', this.clientSideToken);
+    console.log('API Key:', this.apiKey);
+    console.log('Pay Per Video Price ID:', config.paddle.priceIds.payPerVideo);
+    console.log('Environment:', this.environment);
+    
     if (!this.vendorId || !this.clientSideToken) {
       console.warn('Paddle configuration missing. Please set VITE_PADDLE_VENDOR_ID and VITE_PADDLE_CLIENT_SIDE_TOKEN');
     } else {
