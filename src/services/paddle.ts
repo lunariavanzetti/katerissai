@@ -179,13 +179,37 @@ class PaddleService {
         cleanup();
       };
 
+      const handleError = (event: any) => {
+        console.error('❌ Paddle checkout error event:', event);
+        cleanup();
+        // Fallback to server-side checkout on error
+        console.log('🔄 Checkout error detected, falling back to server-side...');
+        this.createServerSideCheckout(options)
+          .then(resolve)
+          .catch(reject);
+      };
+
       const cleanup = () => {
         window.removeEventListener('paddle_checkout_success', handleSuccess);
         window.removeEventListener('paddle_checkout_close', handleClose);
+        window.removeEventListener('paddle_checkout_error', handleError);
+        if (fallbackTimeout) {
+          clearTimeout(fallbackTimeout);
+        }
       };
 
       window.addEventListener('paddle_checkout_success', handleSuccess);
       window.addEventListener('paddle_checkout_close', handleClose);
+      window.addEventListener('paddle_checkout_error', handleError);
+
+      // Also set up a timeout to fallback if checkout doesn't load
+      const fallbackTimeout = setTimeout(() => {
+        console.log('🔄 Checkout timeout, falling back to server-side...');
+        cleanup();
+        this.createServerSideCheckout(options)
+          .then(resolve)
+          .catch(reject);
+      }, 5000);
 
       console.log('🔧 Opening Paddle checkout with options:', {
         ...checkoutOptions,
