@@ -68,7 +68,7 @@ class PaddleService {
       apiKey: this.apiKey,
       priceIds: config.paddle.priceIds,
       currentURL: window.location.origin,
-      configSource: 'import.meta.env values'
+      configSource: "import.meta.env values"
     });
     
     console.log('🔑 FULL API KEYS (for debugging):');
