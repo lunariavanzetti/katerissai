@@ -4,6 +4,18 @@ export const env = import.meta.env;
 // Database connection status
 console.log('🗄️ Database configured:', !!import.meta.env.VITE_SUPABASE_URL);
 
+// COMPREHENSIVE API KEY DEBUGGING
+console.log('🔍 === COMPLETE PADDLE CONFIGURATION DEBUG ===');
+console.log('🔑 VENDOR ID:', import.meta.env.VITE_PADDLE_VENDOR_ID);
+console.log('🔑 CLIENT-SIDE TOKEN:', import.meta.env.VITE_PADDLE_CLIENT_SIDE_TOKEN);
+console.log('🔑 API KEY:', import.meta.env.VITE_PADDLE_API_KEY);
+console.log('🔑 ENVIRONMENT:', import.meta.env.VITE_PADDLE_ENVIRONMENT);
+console.log('🔑 PAY PER VIDEO PRICE ID:', import.meta.env.VITE_PADDLE_PAY_PER_VIDEO_PRICE_ID);
+console.log('🔑 BASIC MONTHLY PRICE ID:', import.meta.env.VITE_PADDLE_BASIC_MONTHLY_PRICE_ID);
+console.log('🔑 PREMIUM MONTHLY PRICE ID:', import.meta.env.VITE_PADDLE_PREMIUM_MONTHLY_PRICE_ID);
+console.log('🌍 CURRENT DOMAIN:', window.location.origin);
+console.log('🔍 === END PADDLE DEBUG ===');
+
 export const config = {
   supabase: {
     url: import.meta.env.VITE_SUPABASE_URL || '',
