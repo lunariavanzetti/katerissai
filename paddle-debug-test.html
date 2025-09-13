@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Paddle Debug Test</title>
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+</head>
+<body>
+    <h1>Paddle Configuration Test</h1>
+    <button onclick="testPaddleCheckout()">Test Paddle Checkout</button>
+    <div id="output"></div>
+
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += '<div>' + message + '</div>';
+        }
+
+        function testPaddleCheckout() {
+            log('🔍 Testing Paddle Configuration...');
+            
+            // Your NEW Paddle account configuration
+            const config = {
+                clientToken: "test_08916330e73c883d57053480154",
+                vendorId: "37939",
+                environment: "sandbox",
+                priceId: "pri_01k51d98wsz56f8w2fkywqa9jq"
+            };
+            
+            log('Configuration: ' + JSON.stringify(config, null, 2));
+            
+            try {
+                // Initialize Paddle
+                log('🔧 Initializing Paddle...');
+                Paddle.Setup({
+                    token: config.clientToken
+                });
+                log('✅ Paddle initialized successfully');
+                
+                // Test checkout with minimal configuration
+                log('🚀 Testing checkout...');
+                Paddle.Checkout.open({
+                    items: [{
+                        priceId: config.priceId,
+                        quantity: 1
+                    }]
+                });
+                log('✅ Checkout opened successfully');
+                
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+                log('❌ Full error: ' + JSON.stringify(error, null, 2));
+            }
+        }
+        
+        // Test when page loads
+        window.addEventListener('load', function() {
+            log('✅ Page loaded, Paddle SDK available: ' + (typeof Paddle !== 'undefined'));
+        });
+    </script>
+</body>
+</html>
