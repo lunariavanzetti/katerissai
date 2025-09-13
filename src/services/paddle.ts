@@ -126,7 +126,7 @@ class PaddleService {
   }
 
   /**
-   * Open Paddle Checkout for one-time payments
+   * Open Paddle Checkout for one-time payments - DEBUGGING VERSION
    */
   async openCheckout(options: {
     priceId?: string;
@@ -181,10 +181,35 @@ class PaddleService {
         priceId: checkoutOptions.items?.[0]?.priceId || 'direct-price'
       });
 
+      // Add more detailed debugging
+      console.log('🔍 Full checkout payload:', JSON.stringify(checkoutOptions, null, 2));
+      console.log('🔍 Paddle SDK status:', {
+        paddleExists: !!window.Paddle,
+        checkoutExists: !!window.Paddle?.Checkout,
+        openExists: !!window.Paddle?.Checkout?.open,
+        environment: this.environment,
+        vendorId: this.vendorId,
+        token: this.clientSideToken.substring(0, 10) + '...'
+      });
+
       try {
-        window.Paddle.Checkout.open(checkoutOptions);
+        // Try a simplified checkout first
+        const simplifiedOptions = {
+          items: [{
+            priceId: options.priceId || config.paddle.priceIds.payPerVideo,
+            quantity: options.quantity || 1
+          }]
+        };
+        
+        console.log('🧪 Trying simplified checkout options:', simplifiedOptions);
+        window.Paddle.Checkout.open(simplifiedOptions);
       } catch (error) {
         console.error('❌ Paddle checkout failed:', error);
+        console.error('❌ Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
         cleanup();
         reject(error);
       }
