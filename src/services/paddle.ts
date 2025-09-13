@@ -51,16 +51,23 @@ class PaddleService {
   private initialized: boolean = false;
   private vendorId: string;
   private clientSideToken: string;
+  private apiKey: string;
 
   constructor() {
     this.environment = config.paddle.environment as 'sandbox' | 'production';
     this.vendorId = config.paddle.vendorId || '';
     this.clientSideToken = config.paddle.clientSideToken || '';
+    this.apiKey = config.paddle.apiKey || '';
     
     if (!this.vendorId || !this.clientSideToken) {
       console.warn('Paddle configuration missing. Please set VITE_PADDLE_VENDOR_ID and VITE_PADDLE_CLIENT_SIDE_TOKEN');
     } else {
       console.log('🏄‍♂️ Paddle configured for', this.environment, 'environment');
+      if (this.apiKey) {
+        console.log('✅ Server-side API key configured');
+      } else {
+        console.warn('⚠️ Server-side API key missing - some features may not work');
+      }
     }
   }
 
