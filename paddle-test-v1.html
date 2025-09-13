@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Paddle v1 API Test</title>
+    <script src="https://cdn.paddle.com/paddle/paddle.js"></script>
+</head>
+<body>
+    <h1>Paddle v1 API Test</h1>
+    <button onclick="testPaddleV1()">Test Paddle v1 Checkout</button>
+    <div id="output"></div>
+
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += '<div>' + message + '</div>';
+        }
+
+        function testPaddleV1() {
+            log('🔍 Testing Paddle v1 API...');
+            
+            try {
+                // Initialize Paddle v1
+                log('🔧 Initializing Paddle v1...');
+                Paddle.Setup({
+                    vendor: 37939,
+                    environment: 'sandbox'
+                });
+                log('✅ Paddle v1 initialized');
+                
+                // Test v1 checkout
+                log('🚀 Opening v1 checkout...');
+                Paddle.Checkout.open({
+                    product: 'pri_01k51d98wsz56f8w2fkywqa9jq',
+                    email: 'test@example.com',
+                    successCallback: function(data) {
+                        log('✅ Payment successful: ' + JSON.stringify(data));
+                    },
+                    closeCallback: function() {
+                        log('❌ Checkout closed');
+                    }
+                });
+                
+            } catch (error) {
+                log('❌ v1 Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

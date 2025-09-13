@@ -222,9 +222,66 @@ class PaddleService {
           stack: error.stack
         });
         cleanup();
-        reject(error);
+        
+        // Fallback to server-side checkout creation
+        console.log('🔄 Falling back to server-side checkout...');
+        this.createServerSideCheckout(options)
+          .then(resolve)
+          .catch(reject);
       }
     });
+  }
+
+  /**
+   * Create server-side checkout session (fallback method)
+   */
+  async createServerSideCheckout(options: {
+    priceId?: string;
+    quantity?: number;
+    customerEmail?: string;
+    customData?: Record<string, any>;
+  }): Promise<PaddleCheckoutSuccess> {
+    try {
+      console.log('🌐 Creating server-side checkout session...');
+      
+      const response = await fetch('/api/paddle/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          priceId: options.priceId || config.paddle.priceIds.payPerVideo,
+          quantity: options.quantity || 1,
+          customerEmail: options.customerEmail,
+          customData: options.customData
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Server-side checkout failed: ${JSON.stringify(errorData)}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Server-side checkout created:', result);
+
+      if (result.checkoutUrl) {
+        // Redirect to Paddle's hosted checkout
+        console.log('🌐 Redirecting to hosted checkout:', result.checkoutUrl);
+        window.open(result.checkoutUrl, '_blank');
+        
+        return {
+          checkout: { id: result.transactionId || 'server-side-checkout' },
+          transaction: { id: result.transactionId || 'pending' }
+        } as PaddleCheckoutSuccess;
+      } else {
+        throw new Error('No checkout URL returned from server');
+      }
+
+    } catch (error) {
+      console.error('❌ Server-side checkout failed:', error);
+      throw error;
+    }
   }
 
   /**

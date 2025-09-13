@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Paddle Test</title>
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+</head>
+<body>
+    <h1>Simple Paddle Test</h1>
+    <button onclick="testMinimalPaddle()">Test Minimal Paddle</button>
+    <div id="output"></div>
+
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += '<div>' + message + '</div>';
+        }
+
+        function testMinimalPaddle() {
+            log('🔍 Testing minimal Paddle setup...');
+            
+            try {
+                // Most basic Paddle setup
+                log('🔧 Setting up Paddle...');
+                Paddle.Setup({
+                    token: "test_08916330e73c883d57053480154"
+                });
+                log('✅ Paddle setup complete');
+                
+                // Try to get price information first
+                log('🔍 Testing price retrieval...');
+                
+                // Minimal checkout attempt
+                log('🚀 Attempting minimal checkout...');
+                Paddle.Checkout.open({
+                    items: [{
+                        priceId: "pri_01k51d98wsz56f8w2fkywqa9jq",
+                        quantity: 1
+                    }],
+                    settings: {
+                        displayMode: "overlay",
+                        theme: "light",
+                        locale: "en"
+                    }
+                });
+                log('✅ Checkout call made');
+                
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+                log('❌ Stack: ' + error.stack);
+            }
+        }
+        
+        // Also test if Paddle object has expected methods
+        window.addEventListener('load', function() {
+            log('📋 Paddle SDK loaded');
+            log('🔍 Available methods: ' + Object.keys(window.Paddle || {}).join(', '));
+            if (window.Paddle && window.Paddle.Checkout) {
+                log('🔍 Checkout methods: ' + Object.keys(window.Paddle.Checkout).join(', '));
+            }
+        });
+    </script>
+</body>
+</html>
