@@ -46,10 +46,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       customer: customerEmail ? {
         email: customerEmail
       } : undefined,
-      custom_data: customData,
-      checkout: {
-        url: `${process.env.VERCEL_URL || 'https://katerissai.vercel.app'}/dashboard?payment=success`
-      }
+      custom_data: customData
+      // Remove checkout URL until domain is approved
+      // checkout: {
+      //   url: `${process.env.VERCEL_URL || 'https://katerissai.vercel.app'}/dashboard?payment=success`
+      // }
     };
 
     console.log('🚀 Sending request to Paddle API:', apiBaseUrl);
