@@ -138,24 +138,6 @@ class PaddleService {
     customData?: Record<string, any>;
     settings?: PaddleCheckoutSettings;
   }): Promise<PaddleCheckoutSuccess> {
-    // For sandbox testing, use hosted checkout URL to bypass domain approval
-    if (this.environment === 'sandbox') {
-      const checkoutUrl = this.generatePayPerVideoUrl(
-        options.quantity || 1,
-        options.customerEmail
-      );
-      
-      console.log('🌐 Opening hosted checkout URL for sandbox testing:', checkoutUrl);
-      window.open(checkoutUrl, '_blank');
-      
-      // Return a promise that resolves when payment is successful
-      // Note: This is a workaround for domain approval issues
-      return Promise.resolve({
-        checkout: { id: 'hosted-checkout' },
-        transaction: { id: 'pending' }
-      } as PaddleCheckoutSuccess);
-    }
-
     await this.initialize();
 
     if (!window.Paddle) {
@@ -467,16 +449,22 @@ class PaddleService {
    * Generate Paddle checkout URL for pay-per-video
    */
   generatePayPerVideoUrl(videoCount: number = 1, customerEmail?: string): string {
-    // Use Paddle's hosted checkout URL format
+    // Since domain is approved, use embedded checkout instead of hosted
+    // This method should not be called now that domain is approved
+    console.warn('⚠️ Using hosted checkout URL - embedded checkout should work now that domain is approved');
+    
+    // Correct Paddle hosted checkout URL format for sandbox
     const baseUrl = this.environment === 'sandbox' 
-      ? 'https://sandbox-checkout.paddle.com/checkout'
-      : 'https://checkout.paddle.com/checkout';
+      ? 'https://sandbox-vendors.paddle.com/checkout-v2'
+      : 'https://vendors.paddle.com/checkout-v2';
     
     const params = new URLSearchParams();
     
-    // Add price ID and quantity
-    params.append('price_id', config.paddle.priceIds.payPerVideo);
-    params.append('quantity', videoCount.toString());
+    // Use Paddle v2 checkout parameters
+    params.append('items', JSON.stringify([{
+      priceId: config.paddle.priceIds.payPerVideo,
+      quantity: videoCount
+    }]));
     
     // Add customer email if provided
     if (customerEmail) {
