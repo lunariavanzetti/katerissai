@@ -66,8 +66,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('🚀 Sending request to Paddle API:', apiBaseUrl);
     console.log('📦 Transaction data:', JSON.stringify(transactionData, null, 2));
 
-    // Make request to Paddle API
-    const response = await fetch(`${apiBaseUrl}/transactions`, {
+    // Make request to Paddle API - try checkout endpoint instead of transactions
+    const response = await fetch(`${apiBaseUrl}/checkout-sessions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${paddleApiKey}`,
@@ -88,13 +88,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log('✅ Paddle checkout session created:', responseData);
+    console.log('🔍 Full Paddle response:', JSON.stringify(responseData, null, 2));
+    console.log('🔍 Checkout URL from Paddle:', responseData.data?.checkout?.url);
 
     // Return the checkout URL
     return res.status(200).json({
       success: true,
       checkoutUrl: responseData.data?.checkout?.url,
       transactionId: responseData.data?.id,
-      data: responseData.data
+      data: responseData.data,
+      debug: {
+        fullResponse: responseData,
+        checkoutPath: 'data.checkout.url',
+        actualCheckoutUrl: responseData.data?.checkout?.url
+      }
     });
 
   } catch (error) {
