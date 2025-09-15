@@ -290,13 +290,36 @@ class PaddleService {
       console.log('✅ Server-side checkout created:', result);
 
       if (result.checkoutUrl) {
-        // Redirect to Paddle's hosted checkout
+        // Open Paddle's hosted checkout
         console.log('🌐 Redirecting to hosted checkout:', result.checkoutUrl);
-        window.open(result.checkoutUrl, '_blank');
-        
+        const opened = window.open(result.checkoutUrl, '_blank');
+
+        if (!opened) {
+          // Show user-friendly message if popup was blocked
+          alert(`Popup blocked! Please manually open this checkout URL:\n\n${result.checkoutUrl}`);
+        }
+
+        // Return a success response to show "waiting for payment" state
         return {
-          checkout: { id: result.transactionId || 'server-side-checkout' },
-          transaction: { id: result.transactionId || 'pending' }
+          checkout: {
+            id: result.transactionId || 'server-side-checkout',
+            completed: false
+          },
+          transaction: {
+            id: result.transactionId || 'pending',
+            status: 'pending'
+          },
+          order: {
+            id: result.transactionId || 'pending',
+            total: '2.49',
+            currency: 'USD',
+            formatted_total: '$2.49'
+          },
+          user: {
+            id: 'pending',
+            email: 'pending',
+            country: 'pending'
+          }
         } as PaddleCheckoutSuccess;
       } else {
         throw new Error('No checkout URL returned from server');
