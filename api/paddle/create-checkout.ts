@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? 'https://api.paddle.com'
       : 'https://sandbox-api.paddle.com';
 
-    // Create transaction request with checkout URL (domain now approved)
+    // Create transaction request without checkout URL (domain approval still pending)
     const transactionData = {
       items: [{
         price_id: priceId,
@@ -52,13 +52,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       customer: customerEmail ? {
         email: customerEmail
       } : undefined,
-      custom_data: customData,
-      checkout: {
-        url: `${process.env.VERCEL_URL || 'https://katerissai.vercel.app'}/dashboard?payment=success`
-      }
+      custom_data: customData
+      // Domain still not approved - removing checkout URL for now
+      // checkout: {
+      //   url: `${process.env.VERCEL_URL || 'https://katerissai.vercel.app'}/dashboard?payment=success`
+      // }
     };
 
-    console.log('🔍 Domain is now approved - including checkout URL');
+    console.log('🔍 Domain approval still pending - creating transaction without checkout URL');
     console.log('🔍 Using API base URL:', apiBaseUrl);
     console.log('🔍 Price ID being used:', priceId);
 
@@ -92,18 +93,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const transactionId = responseData.data?.id;
 
-    // Try different Paddle checkout URL formats
-    const hostedCheckoutUrl = paddleEnvironment === 'production'
-      ? `https://checkout.paddle.com/checkout?_ptxn=${transactionId}`
-      : `https://sandbox-checkout.paddle.com/checkout?_ptxn=${transactionId}`;
+    // Since transaction is created without checkout URL, we need to get it differently
+    // Try to get the checkout URL from Paddle's transaction endpoint
+    let finalCheckoutUrl = null;
 
-    // Also try the original format that Paddle provided
-    const paddleProvidedUrl = responseData.data?.checkout?.url;
-    const finalCheckoutUrl = paddleProvidedUrl || hostedCheckoutUrl;
+    try {
+      console.log('🔍 Attempting to get checkout URL from transaction API...');
+      const transactionResponse = await fetch(`${apiBaseUrl}/transactions/${transactionId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${paddleApiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-    console.log('🔗 Constructed hosted checkout URL:', hostedCheckoutUrl);
-    console.log('🔗 Paddle provided URL:', paddleProvidedUrl);
-    console.log('🔗 Final checkout URL:', finalCheckoutUrl);
+      if (transactionResponse.ok) {
+        const transactionData = await transactionResponse.json();
+        console.log('🔍 Transaction details:', JSON.stringify(transactionData, null, 2));
+        finalCheckoutUrl = transactionData.data?.checkout?.url;
+      }
+    } catch (error) {
+      console.log('🔍 Could not fetch transaction details:', error.message);
+    }
+
+    // Fallback: Use the payment link that we know works in the PaymentLinkHandler
+    const paymentLinkUrl = `${process.env.VERCEL_URL || 'https://katerissai.vercel.app'}?_ptxn=${transactionId}`;
+
+    if (!finalCheckoutUrl) {
+      finalCheckoutUrl = paymentLinkUrl;
+      console.log('🔗 Using payment link as checkout URL:', finalCheckoutUrl);
+    } else {
+      console.log('🔗 Got checkout URL from Paddle:', finalCheckoutUrl);
+    }
 
     // Return the proper checkout URL
     return res.status(200).json({
@@ -112,10 +133,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       transactionId: transactionId,
       data: responseData.data,
       debug: {
-        paddleProvidedUrl: paddleProvidedUrl,
-        constructedUrl: hostedCheckoutUrl,
+        paymentLinkUrl: paymentLinkUrl,
         finalUrl: finalCheckoutUrl,
-        environment: paddleEnvironment
+        environment: paddleEnvironment,
+        note: 'Use the paymentLinkUrl which redirects to proper Paddle checkout'
       }
     });
 
