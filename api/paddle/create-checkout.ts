@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? 'https://api.paddle.com'
       : 'https://sandbox-api.paddle.com';
 
-    // Create transaction request (temporarily without checkout URL to test basic functionality)
+    // Create transaction request with checkout URL (domain now approved)
     const transactionData = {
       items: [{
         price_id: priceId,
@@ -52,14 +52,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       customer: customerEmail ? {
         email: customerEmail
       } : undefined,
-      custom_data: customData
-      // Temporarily removing checkout URL due to domain approval issues
-      // checkout: {
-      //   url: `${process.env.VERCEL_URL || 'https://katerissai.vercel.app'}/dashboard?payment=success`
-      // }
+      custom_data: customData,
+      checkout: {
+        url: `${process.env.VERCEL_URL || 'https://katerissai.vercel.app'}/dashboard?payment=success`
+      }
     };
 
-    console.log('🔍 Domain issue detected - testing without custom checkout URL');
+    console.log('🔍 Domain is now approved - including checkout URL');
     console.log('🔍 Using API base URL:', apiBaseUrl);
     console.log('🔍 Price ID being used:', priceId);
 
