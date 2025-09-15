@@ -20,6 +20,7 @@ import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import RefundPage from './pages/RefundPage';
 import { AuthGuard } from './components/auth/AuthGuard';
+import { PaymentLinkHandler } from './components/payment/PaymentLinkHandler';
 
 // Styles
 import './styles/globals.css';
@@ -93,6 +94,7 @@ function App() {
           <AuthProvider>
             <Router>
             <div className="min-h-screen bg-white dark:bg-gray-900 font-primary transition-colors duration-300">
+            <PaymentLinkHandler />
             <Header />
             <main className="pt-20 min-h-screen">
               <Routes>
