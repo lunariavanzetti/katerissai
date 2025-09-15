@@ -93,22 +93,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const transactionId = responseData.data?.id;
 
-    // Construct the proper Paddle hosted checkout URL
+    // Try different Paddle checkout URL formats
     const hostedCheckoutUrl = paddleEnvironment === 'production'
-      ? `https://checkout.paddle.com/transactions/${transactionId}`
-      : `https://sandbox-checkout.paddle.com/transactions/${transactionId}`;
+      ? `https://checkout.paddle.com/checkout?_ptxn=${transactionId}`
+      : `https://sandbox-checkout.paddle.com/checkout?_ptxn=${transactionId}`;
+
+    // Also try the original format that Paddle provided
+    const paddleProvidedUrl = responseData.data?.checkout?.url;
+    const finalCheckoutUrl = paddleProvidedUrl || hostedCheckoutUrl;
 
     console.log('🔗 Constructed hosted checkout URL:', hostedCheckoutUrl);
+    console.log('🔗 Paddle provided URL:', paddleProvidedUrl);
+    console.log('🔗 Final checkout URL:', finalCheckoutUrl);
 
     // Return the proper checkout URL
     return res.status(200).json({
       success: true,
-      checkoutUrl: hostedCheckoutUrl,
+      checkoutUrl: finalCheckoutUrl,
       transactionId: transactionId,
       data: responseData.data,
       debug: {
-        paddleProvidedUrl: responseData.data?.checkout?.url,
+        paddleProvidedUrl: paddleProvidedUrl,
         constructedUrl: hostedCheckoutUrl,
+        finalUrl: finalCheckoutUrl,
         environment: paddleEnvironment
       }
     });
