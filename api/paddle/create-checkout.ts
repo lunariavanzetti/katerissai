@@ -25,8 +25,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Paddle API configuration
     const paddleApiKey = process.env.VITE_PADDLE_API_KEY;
+    const paddleVendorId = process.env.VITE_PADDLE_VENDOR_ID;
     const paddleEnvironment = process.env.VITE_PADDLE_ENVIRONMENT || 'sandbox';
-    
+
+    console.log('🔍 Server-side Paddle configuration:');
+    console.log('🔍 Vendor ID:', paddleVendorId);
+    console.log('🔍 Environment:', paddleEnvironment);
+    console.log('🔍 API Key present:', !!paddleApiKey);
+
     if (!paddleApiKey) {
       console.error('❌ Paddle API key not configured');
       return res.status(500).json({ error: 'Paddle API key not configured' });
@@ -37,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? 'https://api.paddle.com'
       : 'https://sandbox-api.paddle.com';
 
-    // Create transaction request
+    // Create transaction request (temporarily without checkout URL to test basic functionality)
     const transactionData = {
       items: [{
         price_id: priceId,
@@ -46,11 +52,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       customer: customerEmail ? {
         email: customerEmail
       } : undefined,
-      custom_data: customData,
-      checkout: {
-        url: `${process.env.VERCEL_URL || 'https://katerissai.vercel.app'}/dashboard?payment=success`
-      }
+      custom_data: customData
+      // Temporarily removing checkout URL due to domain approval issues
+      // checkout: {
+      //   url: `${process.env.VERCEL_URL || 'https://katerissai.vercel.app'}/dashboard?payment=success`
+      // }
     };
+
+    console.log('🔍 Domain issue detected - testing without custom checkout URL');
+    console.log('🔍 Using API base URL:', apiBaseUrl);
+    console.log('🔍 Price ID being used:', priceId);
 
     console.log('🚀 Sending request to Paddle API:', apiBaseUrl);
     console.log('📦 Transaction data:', JSON.stringify(transactionData, null, 2));
