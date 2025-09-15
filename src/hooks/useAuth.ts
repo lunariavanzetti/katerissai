@@ -105,37 +105,27 @@ export const useAuth = (): UseAuthReturn => {
 
   const loadUserProfile = useCallback(async (userId: string) => {
     try {
-      // Add timeout to prevent hanging
+      // Much shorter timeout - don't let profile loading slow down auth
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Profile loading timeout')), 5000);
+        setTimeout(() => reject(new Error('Profile loading timeout')), 1000);
       });
 
       const profilePromise = profileService.getProfile(userId);
       const result = await Promise.race([profilePromise, timeoutPromise]) as Awaited<ReturnType<typeof profileService.getProfile>>;
-      
+
       if (result.success && result.data?.profile) {
         updateState({ profile: result.data.profile });
       } else {
-        // Profile might not exist yet, attempt to create it
-        const user = state.user;
-        if (user?.email) {
-          const createPromise = profileService.createProfile(userId, user.email, {
-            full_name: user.user_metadata?.full_name || null,
-          });
-          const createResult = await Promise.race([createPromise, timeoutPromise]) as Awaited<ReturnType<typeof profileService.createProfile>>;
-          
-          if (createResult.success && createResult.data?.profile) {
-            updateState({ profile: createResult.data.profile });
-          }
-        }
+        // Don't try to create profile during auth - do it later to avoid delays
+        console.log('Profile not found, will create later if needed');
+        updateState({ profile: null });
       }
     } catch (error) {
-      console.error('Error loading user profile:', error);
-      // Don't set error state for profile loading failures
-      // Instead, continue without profile to prevent infinite loading
+      console.log('Profile loading skipped:', error.message);
+      // Don't let profile issues slow down authentication
       updateState({ profile: null });
     }
-  }, [state.user, updateState]);
+  }, [updateState]);
 
   // ==========================================================================
   // AUTH ACTIONS
@@ -150,10 +140,12 @@ export const useAuth = (): UseAuthReturn => {
       
       if (result.success && result.data?.user && result.data?.session) {
         setAuthData(result.data.user, result.data.session);
-        
-        // Load or create profile
+
+        // Load profile in background (non-blocking)
         if (result.data.user.id) {
-          await loadUserProfile(result.data.user.id);
+          loadUserProfile(result.data.user.id).catch(() => {
+            // Ignore profile loading errors during signup
+          });
         }
       } else if (result.error) {
         setError(result.error.toString());
@@ -179,10 +171,12 @@ export const useAuth = (): UseAuthReturn => {
       
       if (result.success && result.data?.user && result.data?.session) {
         setAuthData(result.data.user, result.data.session);
-        
-        // Load user profile
+
+        // Load profile in background (non-blocking)
         if (result.data.user.id) {
-          await loadUserProfile(result.data.user.id);
+          loadUserProfile(result.data.user.id).catch(() => {
+            // Ignore profile loading errors during signin
+          });
         }
       } else if (result.error) {
         setError(result.error.toString());
@@ -367,15 +361,15 @@ export const useAuth = (): UseAuthReturn => {
 
     initializeAuth();
 
-    // Shorter failsafe timeout since we're not doing complex profile loading
+    // Much shorter failsafe timeout for faster auth
     const failsafeTimeout = setTimeout(() => {
       if (mounted && state.loading) {
-        console.warn('Failsafe: Force stopping loading after 5 seconds');
+        console.warn('Failsafe: Force stopping loading after 2 seconds');
         console.warn('Current auth state:', { user: !!state.user, loading: state.loading, isAuthenticated: state.isAuthenticated });
         // Force stop loading regardless of current state
         updateState({ loading: false });
       }
-    }, 5000);
+    }, 2000);
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -388,14 +382,12 @@ export const useAuth = (): UseAuthReturn => {
           case 'SIGNED_IN':
             if (session?.user) {
               console.log('Auth state change: SIGNED_IN, setting auth data for user:', session.user.email);
-              // Only update if the user has changed or we don't have a user yet
-              if (!state.user || state.user.id !== session.user.id) {
-                setAuthData(session.user, session);
-              } else {
-                console.log('🔧 User already authenticated, skipping re-initialization');
-                // Just ensure loading is false
-                updateState({ loading: false });
-              }
+              // Always update quickly, don't wait for profile
+              setAuthData(session.user, session, null);
+              // Load profile in background (non-blocking)
+              loadUserProfile(session.user.id).catch(() => {
+                // Ignore profile loading errors
+              });
             }
             break;
 
