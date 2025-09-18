@@ -170,7 +170,89 @@ export const SimpleVideoGenerator: React.FC<SimpleVideoGeneratorProps> = ({
             )}
           </AnimatePresence>
 
-          {/* Main Input */}
+          {/* Settings Preview - Moved to top */}
+          <div className="bg-gradient-to-r from-pink-50/80 to-green-50/80 dark:from-pink-900/30 dark:to-green-900/30 rounded-xl border-2 border-black dark:border-gray-600 p-4 shadow-brutal">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4 text-sm font-medium">
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-600 dark:text-gray-400">Quality:</span>
+                  <span className="text-primary dark:text-green-400 capitalize font-bold">{settings.quality}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-600 dark:text-gray-400">Length:</span>
+                  <span className="text-primary dark:text-green-400 font-bold">{settings.duration}s</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-600 dark:text-gray-400">Resolution:</span>
+                  <span className="text-primary dark:text-green-400 font-bold">{settings.resolution}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-600 dark:text-gray-400">Format:</span>
+                  <span className="text-primary dark:text-green-400 font-bold">{settings.aspectRatio}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Cost</div>
+                  <div className="font-bold text-primary dark:text-green-400">{cost.totalCredits} credits</div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAdvancedSettings(true)}
+                  disabled={generationState.isGenerating}
+                  className="text-xs"
+                >
+                  <Cog6ToothIcon className="w-4 h-4 mr-1" />
+                  Customize
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Aspect Ratio Selection - New section */}
+          <div className="space-y-3">
+            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">
+              Video Format 📱
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { value: '16:9', label: '16:9', description: 'Landscape (YouTube)' },
+                { value: '9:16', label: '9:16', description: 'Portrait (TikTok)' },
+                { value: '1:1', label: '1:1', description: 'Square (Instagram)' },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className={clsx(
+                    'p-3 border-3 cursor-pointer transition-colors rounded-lg',
+                    settings.aspectRatio === option.value
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white dark:bg-gray-800 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700',
+                    generationState.isGenerating && 'opacity-50 cursor-not-allowed hover:bg-white dark:hover:bg-gray-800'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="aspectRatio"
+                    value={option.value}
+                    checked={settings.aspectRatio === option.value}
+                    onChange={(e) => updateSettings({ aspectRatio: e.target.value as any })}
+                    disabled={generationState.isGenerating}
+                    className="sr-only"
+                  />
+
+                  <div className="text-center">
+                    <div className="font-bold text-sm mb-1">{option.label}</div>
+                    <div className="text-xs opacity-90">{option.description}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Main Input - Moved to bottom */}
           <div className="space-y-4">
             {/* Video Description */}
             <div className="relative">
@@ -215,44 +297,6 @@ export const SimpleVideoGenerator: React.FC<SimpleVideoGeneratorProps> = ({
             </div>
           </div>
 
-          {/* Settings Preview */}
-          <div className="bg-gradient-to-r from-pink-50/80 to-green-50/80 dark:from-pink-900/30 dark:to-green-900/30 rounded-xl border-2 border-black dark:border-gray-600 p-4 shadow-brutal">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-4 text-sm font-medium">
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-600 dark:text-gray-400">Quality:</span>
-                  <span className="text-primary dark:text-green-400 capitalize font-bold">{settings.quality}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-600 dark:text-gray-400">Length:</span>
-                  <span className="text-primary dark:text-green-400 font-bold">{settings.duration}s</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-600 dark:text-gray-400">Resolution:</span>
-                  <span className="text-primary dark:text-green-400 font-bold">{settings.resolution}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Cost</div>
-                  <div className="font-bold text-primary dark:text-green-400">{cost.totalCredits} credits</div>
-                </div>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAdvancedSettings(true)}
-                  disabled={generationState.isGenerating}
-                  className="text-xs"
-                >
-                  <Cog6ToothIcon className="w-4 h-4 mr-1" />
-                  Customize
-                </Button>
-              </div>
-            </div>
-          </div>
-
           {/* Generate Button */}
           <div className="flex justify-center pt-2">
             <Button
@@ -260,8 +304,8 @@ export const SimpleVideoGenerator: React.FC<SimpleVideoGeneratorProps> = ({
               size="lg"
               onClick={handleGenerate}
               disabled={
-                !prompt.trim() || 
-                !title.trim() || 
+                !prompt.trim() ||
+                !title.trim() ||
                 generationState.isGenerating ||
                 !isSettingsValid ||
                 (!hasActiveSubscription && !canGenerateVideo)
